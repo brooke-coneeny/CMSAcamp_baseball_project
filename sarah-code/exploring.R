@@ -1,4 +1,5 @@
 library(baseballr)
+library(Lahman)
 library(tidyverse)
 
 may_week1 <- scrape_statcast_savant_batter_all(start_date = "2021-05-01",
@@ -19,28 +20,47 @@ batter_all_2021 <- bind_rows(april, may2021, june_2021)
 #need to find each hitters max EV and the corresponding launch angle and their wOBA for the season and 
 #each data point is a person
 
+# batter_all_2021 %>%
+#   filter(description == "hit_into_play", !is.na(events), launch_angle %in% c(-40:60))%>%
+#   mutate(events_group = case_when(
+#     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+#                   "fielders_choice_out", "force_out", "sac_bunt", "sac_fly_double_play", 
+#                   "sac_bunt_double_play", "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+#     TRUE ~ "hit"
+#   ), wOBA = case_when(
+#     events == "single" ~ .882,
+#     events == "double" ~ 1.242,
+#     events == "triple" ~ 1.586,
+#     events == "home_run" ~ 2.039,
+#     events_group == "out" ~ 0
+#   ), launch_speed_group = case_when(
+#     launch_speed < 106 ~ "low",
+#     launch_speed >= 106 & launch_speed < 112 ~ "medium",
+#     launch_speed >= 112 ~ "high"
+#   )
+#   )%>%
+#   dplyr::select(wOBA, launch_speed, launch_angle, launch_speed_group)%>%
+#   ggplot(aes(x=launch_angle, y=wOBA, color = launch_speed_group))+
+#   geom_smooth(method="loess", se=FALSE)+
+#   theme_bw()
+
+#trying to get it right by batter
+batting_Lahman <- Lahman::Batting
+batting_Lahman_2021 <- batting_Lahman %>%     #doens't have 2021 data yet! also doesnt count singles?!?!
+  filter(yearID == 2021)
+
 batter_all_2021 %>%
-  filter(description == "hit_into_play", !is.na(events), launch_angle %in% c(-40:60))%>%
-  mutate(events_group = case_when(
-    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
-                  "fielders_choice_out", "force_out", "sac_bunt", "sac_fly_double_play", 
-                  "sac_bunt_double_play", "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
-    TRUE ~ "hit"
-  ), wOBA = case_when(
-    events == "single" ~ .882,
-    events == "double" ~ 1.242,
-    events == "triple" ~ 1.586,
-    events == "home_run" ~ 2.039,
-    events_group == "out" ~ 0
-  ), launch_speed_group = case_when(
-    launch_speed < 106 ~ "low",
-    launch_speed >= 106 & launch_speed < 112 ~ "medium",
-    launch_speed >= 112 ~ "high"
-  )
-  )%>%
-  dplyr::select(wOBA, launch_speed, launch_angle, launch_speed_group)%>%
-  ggplot(aes(x=launch_angle, y=wOBA, color = launch_speed_group))+
-  geom_smooth(method="loess", se=FALSE)+
-  theme_bw()
+  filter(description == "hit_into_play", !is.na(events), !is.na(launch_speed))%>%
+  group_by(player_name)%>%
+  summarize(max_velo = max(launch_speed)) #%>% #how do you get the correct launch angle that goes with this value?
+  #mutate(wOBA = woba_plus(#would pass in Lahman dataframe here? but no singles),
+          #velo_group = case_when(
+            #max_velo < 106 ~ "low",
+            #max_velo >= 106 & launch_speed < 112 ~ "medium",
+            #max_velo >= 112 ~ "high"
+          #)) %>%
+  #ggplot(aes(x=launch_angle, y=wOBA, color = velo_group))+
+  #geom_smooth(method="loess", se=FALSE)+
+  #theme_bw()
   
   
