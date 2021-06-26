@@ -44,23 +44,26 @@ batter_all_2021 <- bind_rows(april, may2021, june_2021)
 #   geom_smooth(method="loess", se=FALSE)+
 #   theme_bw()
 
-#trying to get it right by batter
+#gives us totals for all variables but singles, could calculate singles though???????????
+#how do you merge players on different teams? the playerID is confusing???????????
 batting_Lahman <- Lahman::Batting
-batting_Lahman_2021 <- batting_Lahman %>%     #doens't have 2021 data yet! also doesnt count singles?!?!
-  filter(yearID == 2021)
+batting_Lahman_2019 <- batting_Lahman %>%     #doens't have 2021 data yet! also doesnt count singles?!?!
+  filter(yearID == 2019)
 
-batter_all_2021 %>%
-  filter(description == "hit_into_play", !is.na(events), !is.na(launch_speed))%>%
-  group_by(player_name)%>%
-  summarize(max_velo = max(launch_speed)) #%>% #how do you get the correct launch angle that goes with this value?
-  #mutate(wOBA = woba_plus(#would pass in Lahman dataframe here? but no singles),
-          #velo_group = case_when(
-            #max_velo < 106 ~ "low",
-            #max_velo >= 106 & launch_speed < 112 ~ "medium",
-            #max_velo >= 112 ~ "high"
-          #)) %>%
+max_exit_velos <- batter_all_2021 %>%
+#this gets us each player's max EV and the associated angle
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV < 130 & max_EV>0) %>%
+  left_join(batter_all_2021, by = c("player_name", "max_EV" = "launch_speed")) %>%
+  select(player_name, max_EV, launch_angle) %>%
+  #still need to somehow calculate wOBA??????????
+  #mutate(wOBA = woba_plus())
+  mutate(EV_group = cut(max_EV, breaks = c(0, 105.99, 111.99, 150), labels = c("<106", "106+", "112+"))) %>%
   #ggplot(aes(x=launch_angle, y=wOBA, color = velo_group))+
   #geom_smooth(method="loess", se=FALSE)+
   #theme_bw()
   
   
+
+
