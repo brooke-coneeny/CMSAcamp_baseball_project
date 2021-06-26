@@ -37,6 +37,14 @@ batter_woba <- batter_hits %>%
   mutate(woba_balls_hit = (0.833*single + 1.253*double + 1.587*triple + 2.041*home_run)/(total_at_bats + SF)) %>%
   select(player_name, woba_balls_hit)
 
+#find max exit velocity and association launch angle for each player 
+max_exit_velos <- batter_hits %>%
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE))
+  left_join(batter_hits, by = c("player_name", "max_EV", "launch_speed")) %>%
+  select(player_name, max_EV, launch_angle)
+
+
 
 
   
