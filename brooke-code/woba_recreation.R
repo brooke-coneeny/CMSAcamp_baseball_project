@@ -39,9 +39,5 @@ batter_woba <- batter_hits %>%
 
 
 
-  #wOBA in play formula: 1B + 2B + 3B + HR / AB + SF
-  mutate(
-    wOBA_balls_hit = ((0.833("single") + 1.253("double") + 1.587("triple") + 2.041("home_run"))/(total AB + total SF))
-  )
   
   
