@@ -20,8 +20,4 @@ june_week04 <- scrape_statcast_savant_batter_all(start_date = "2021-06-22",
 june_2021 <- bind_rows(june_week01, june_week02, june_week03, june_week04)
 View(june_2021)
 
-june_2021 %>%
-  ggplot(mapping = aes(x = release_speed, y = launch_speed )) +
-  facet_wrap(~pitch_type) +
-  geom_point()
   
