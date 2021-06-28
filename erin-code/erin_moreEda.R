@@ -5,41 +5,7 @@ library(readr)
 player_wobas <- read_csv("woba_2021data.csv")
 
 ### Loading data 
-june_week01 <- scrape_statcast_savant_batter_all(start_date = "2021-06-01", 
-                                                 end_date = "2021-06-07")
-june_week02 <- scrape_statcast_savant_batter_all(start_date = "2021-06-08", 
-                                                 end_date = "2021-06-14")
-june_week03 <- scrape_statcast_savant_batter_all(start_date = "2021-06-15", 
-                                                 end_date = "2021-06-21")
-june_week04 <- scrape_statcast_savant_batter_all(start_date = "2021-06-22", 
-                                                 end_date = "2021-06-23")
-june_2021 <- bind_rows(june_week01, june_week02, june_week03, june_week04)
-april_week1 <- scrape_statcast_savant_batter_all(
-  start_date = "2021-04-01", 
-  end_date = "2021-04-07")
-april_week2 <- scrape_statcast_savant_batter_all(
-  start_date = "2021-04-08", 
-  end_date = "2021-04-14")
-april_week3 <- scrape_statcast_savant_batter_all(
-  start_date = "2021-04-15", 
-  end_date = "2021-04-21")
-april_week4 <- scrape_statcast_savant_batter_all(
-  start_date = "2021-04-22", 
-  end_date = "2021-04-28")
-april_2930 <- scrape_statcast_savant_batter_all(
-  start_date = "2021-04-29", 
-  end_date = "2021-04-30")
-april <- bind_rows(april_week1, april_week2, april_week3, april_week4, april_2930)
-may_week1 <- scrape_statcast_savant_batter_all(start_date = "2021-05-01",
-                                               end_date = "2021-05-07")
-may_week2 <- scrape_statcast_savant_batter_all(start_date = "2021-05-08",
-                                               end_date = "2021-05-14")
-may_week3 <- scrape_statcast_savant_batter_all(start_date = "2021-05-15",
-                                               end_date = "2021-05-22")
-may_week4 <- scrape_statcast_savant_batter_all(start_date = "2021-05-23",
-                                               end_date = "2021-05-31")
-may2021 <- bind_rows(may_week1, may_week2, may_week3, may_week4)
-batter_all_2021 <- bind_rows(april, may2021, june_2021)
+batter_all_2021 <- read_rds("data/all2021data.rds")
 
 #distribution of event by launch angle and exit velocity -------------------
 batter_all_2021 %>%
