@@ -1,7 +1,8 @@
 library(baseballr)
-library(Lahman)
 library(tidyverse)
 
+#baseballr package info: http://billpetti.github.io/baseballr/
+#variable meanings: https://app.box.com/v/statcast-pitchfx-glossary-pett
 
 # 2019 data ---------------------------------------------------------------
 
@@ -110,4 +111,42 @@ wOBA_angle_velo_graph <- batter_all_2019 %>%
   
   
 
+# Do righties vs. lefties have a distinct ev/angle combo?  --------------------------------------------
 
+batter_all_2019 %>%
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV < 130 & max_EV>0) %>%
+  left_join(batter_all_2019, by = c("player_name", "max_EV" = "launch_speed")) %>%
+  select(player_name, max_EV, launch_angle, stand)%>%
+  ggplot(aes(x=launch_angle, y=max_EV, color = stand))+
+  geom_point(alpha = .4)+
+  theme_bw()+
+  labs(x = "Launch Angle",
+       y = "Max Exit Velocity")
+
+
+# where the max ev hits landed -----------------------------------------------------------------------
+
+batter_all_2019 %>%
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV < 130 & max_EV>0) %>%
+  left_join(batter_all_2019, by = c("player_name", "max_EV" = "launch_speed"))%>%
+  select(player_name, hc_x, hc_y, stand, events)%>%
+  filter(!is.na(stand), !is.na(events))%>%
+  mutate(events = case_when(
+#for the purposes of this, field error and fielders choice are outs because in normal play that's what 
+    #they would have been
+    events %in% c("double_play", "field_out", "grounded_into_double_play", "sac_bunt", 
+                  "sac_fly", "field_error", "fielders_choice") ~ "out",
+    events %in% c("single", "force_out") ~ "single",
+    events == "double" ~ "double",
+    events == "home_run" ~ "home_run",
+    events == "triple" ~ "triple"
+  ))%>%
+#coloring by event might allow us to see how the shift affects lefties
+  ggplot(mapping = aes(x = hc_x, y = hc_y, color = events)) +
+  geom_point() +
+  facet_wrap(~stand) +
+  scale_y_reverse()
