@@ -63,9 +63,10 @@ expected_stats_2019 <- read_csv("expected_stats2019.csv")
 expected_stats_2019 <- expected_stats_2019 %>%
   mutate(name = paste(last_name, first_name, sep = ", "))
 
-# reading in 2019 data without scraping -----------------------------------------------------
-#try reading in rds data
-all_2019_pitches <- read_rds("data/all2019data.rds")
+
+# Write 2019 data to rds --------------------------------------------------
+
+write_rds(batter_all_2019, "data/all2019data.rds")
 
 #2021 data ----------------------------------------------------------------------------------------------
 

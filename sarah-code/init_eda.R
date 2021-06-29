@@ -5,6 +5,10 @@ library(tidyverse)
 #variable meanings: https://app.box.com/v/statcast-pitchfx-glossary-pett
 
 
+# Load data ---------------------------------------------------------------
+
+batter_all_2019 <- read_rds("data/all2019data.rds")
+
 #wOBA vs. launch angle by exit velos -------------------------------------------------------------------
 
 #need to find each hitters max EV and the corresponding launch angle and their wOBA for the season and 
