@@ -104,7 +104,7 @@ wOBA_angle_velo_graph <- batter_all_2019 %>%
   geom_smooth(se = FALSE)+
   #geom_line()+
   scale_x_continuous(limits = c(-40, 60))+
-  scale_y_continuous(limits = c(0, 0.8))+
+  scale_y_continuous(limits = c(0, 1))+
   theme_bw()+
   labs(x= "Launch Angle",
        y = "wOBA")
