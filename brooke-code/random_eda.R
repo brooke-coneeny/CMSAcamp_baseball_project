@@ -127,5 +127,20 @@ below_avg_hit_dist <- batter_all_2021 %>%
                             "out" = "Out", "single" = "Single", "triple" = "Triple"))
 
 
+#Examining the zones and launch angle
+batter_all_2021 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home_run",
+    TRUE ~ "other")) %>%
+  ggplot(mapping = aes(x = zone, fill = events_group)) +
+  geom_bar(position = "fill")
+  
 
   
