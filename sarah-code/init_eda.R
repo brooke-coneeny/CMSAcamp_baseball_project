@@ -7,7 +7,7 @@ library(tidyverse)
 
 # Load data ---------------------------------------------------------------
 
-batter_all_2019 <- read_rds("data/all2019data.rds")
+batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
 #wOBA vs. launch angle by exit velos -------------------------------------------------------------------
 

@@ -84,3 +84,5 @@ may_week4 <- scrape_statcast_savant_batter_all(start_date = "2021-05-23",
 may2021 <- bind_rows(may_week1, may_week2, may_week3, may_week4)
 
 batter_all_2021 <- bind_rows(april, may2021, june_2021)
+
+write_rds(batter_all_2021, "private_data/all2021data.rds")
