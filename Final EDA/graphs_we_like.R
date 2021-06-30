@@ -3,7 +3,7 @@
 
 # Loading Data ------------------------------------------------------------
 
-batter_all_2019 <- read_rds("data/all2019data.rds")
+batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
 #wOBA vs. launch angle by exit velos -------------------------------------------------------------------
 
@@ -58,4 +58,40 @@ wOBA_angle_velo_graph_3 <- max_EV_2019_grouped3 %>%
   labs(x= "Launch Angle",
        y = "wOBA",
        title = "wOBA by Launch Angle")
+
+#Examine different launch angles and out comes 
+batting_data <- read_rds("private_data/all2019data.rds")
+launch_angle_outcomes <- batting_data %>%
+  filter(description == "hit_into_play") %>%
+  mutate(
+    events_group = case_when(
+      events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                    "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                    "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+      events == "single" ~ "single",
+      events == "double" ~ "double", 
+      events == "triple" ~ "triple", 
+      events == "home_run" ~ "home_run", 
+      TRUE ~ "other"),
+    launch_angle_group = cut(
+      launch_angle, breaks = c(-40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60))) %>%
+  filter(
+    events_group %in% c("out", "single", "double", "triple", "home_run"),
+    !is.na(launch_angle_group)
+  ) %>%
+  select(events_group, launch_angle_group) %>%
+  ggplot(mapping = aes(x = launch_angle_group, fill = events_group)) +
+  geom_bar(position = "dodge") +
+  labs(
+    fill = "Outcome",
+    title = "Hit Outcome Grouped by Launch Angle"
+  ) +
+  theme_classic() +
+  theme(
+    axis.title.x = element_blank(),
+  ) 
+
+
+
+
 

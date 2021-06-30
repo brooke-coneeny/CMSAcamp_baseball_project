@@ -1,4 +1,5 @@
 library(baseballr)
+library(tidyverse)
 
 # 2019 data ---------------------------------------------------------------
 
@@ -66,7 +67,7 @@ expected_stats_2019 <- expected_stats_2019 %>%
 
 # Write 2019 data to rds --------------------------------------------------
 
-write_rds(batter_all_2019, "data/all2019data.rds")
+write_rds(batter_all_2019, "private_data/all2019data.rds")
 
 #2021 data ----------------------------------------------------------------------------------------------
 
