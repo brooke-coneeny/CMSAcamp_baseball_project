@@ -5,7 +5,7 @@ library(readr)
 player_wobas <- read_csv("public_data/woba_2021data.csv")
 
 ### Loading data 
-batter_all_2021 <- read_rds("data/all2021data.rds")
+batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
 #distribution of event by launch angle and exit velocity -------------------
 batter_all_2021 %>%
@@ -168,11 +168,13 @@ batter_all_2021 %>%
     events == "triple" ~ "triple", 
     events == "home_run" ~ "home_run", 
     TRUE ~ "other")) %>%
-  filter(events_group %in% c("out", "single", "double", "triple", "home_run")) %>%
   filter(if_fielding_alignment %in% c("Infield shift", "Standard", "Strategic")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home_run"), 
+         launch_angle >= -20 & launch_angle <=50) %>%
   mutate(launch_angle_group = 
-           cut(launch_angle, breaks = c(-90, -80, -70, -60, -50, -40, -30, -20, -10, 
-                                        0, 10, 20, 30, 40, 50, 60, 70, 80, 90))) %>%
+           cut(launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(!is.na(launch_angle_group)) %>%
   ggplot(aes(x = launch_angle_group, fill = events_group))+
   geom_bar(position = "fill")+
   facet_wrap(~if_fielding_alignment, ncol = 1)+

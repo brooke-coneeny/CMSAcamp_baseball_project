@@ -58,7 +58,9 @@ batter_all_2019 <- rbind(march, april1, april2, april3, april4, may1, may2, may3
                          sep3)
 
 #read in this from baseball savant to get the season wOBA value instead of calculating it
+#from: https://baseballsavant.mlb.com/leaderboard/expected_statistics?type=batter&year=2019&position=&team=&min=1
 expected_stats_2019 <- read_csv("expected_stats2019.csv")
+
 
 #combine first and last name so you can join
 expected_stats_2019 <- expected_stats_2019 %>%
