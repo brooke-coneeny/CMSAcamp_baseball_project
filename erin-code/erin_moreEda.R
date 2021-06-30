@@ -2,7 +2,7 @@ library(baseballr)
 library(tidyverse)
 library(readr)
 
-player_wobas <- read_csv("woba_2021data.csv")
+player_wobas <- read_csv("public_data/woba_2021data.csv")
 
 ### Loading data 
 batter_all_2021 <- read_rds("data/all2021data.rds")
