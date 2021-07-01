@@ -64,9 +64,8 @@ wOBA_angle_velo_graph_3 <- max_EV_2019_grouped3 %>%
        title = "wOBA by Launch Angle")
 
 #Examine different launch angles and out comes --------------------------------
-batting_data <- read_rds("private_data/all2019data.rds")
 
-launch_angle_outcomes <- batting_data %>%
+launch_angle_outcomes <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(
     events_group = case_when(
@@ -101,7 +100,7 @@ launch_angle_outcomes <- batting_data %>%
 #above graph shown proportionally:
 # we faceted by fielder alignment and by whether the match up was lefty-on-lefty, 
 # lefty-righty, etc and did not see any noticeable differences 
-proportional_launchAngles <- batter_all_2021 %>%
+proportional_launchAngles <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
@@ -124,7 +123,7 @@ proportional_launchAngles <- batter_all_2021 %>%
   labs(x = "launch angle", y= "", title = "Hit outcome by launch angle", fill = "")+
   theme_minimal()
 
-faceted_by_alignment <- batter_all_2021 %>%
+faceted_by_alignment <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
@@ -151,7 +150,7 @@ faceted_by_alignment <- batter_all_2021 %>%
 
 
 #graph showing hit outcome by exit velocity and launch angle ------------------
-outcome_by_LA_EV <- batter_all_2021 %>%
+outcome_by_LA_EV <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
@@ -172,7 +171,7 @@ outcome_by_LA_EV <- batter_all_2021 %>%
   theme_minimal()
 
 #we then faceted the plot by pitch type to see if there were any differences (and there weren't)
-outcome_faceted <- batter_all_2021 %>%
+outcome_faceted <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
@@ -202,7 +201,7 @@ outcome_faceted <- batter_all_2021 %>%
   theme_minimal()
 
 #hows does hit distance correlate with launch angle?--------------------------
-LA_versus_hitDistance <- batter_all_2021 %>%
+LA_versus_hitDistance <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
     events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
