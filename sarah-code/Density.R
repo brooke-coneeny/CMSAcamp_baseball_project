@@ -41,8 +41,8 @@ wOBA_by_LA_EV <- batter_all_2019 %>%
 
 #Aaron Judge
 judge_stat_density <- batter_all_2019 %>%
-  filter(player_name == "Judge, Aaron") #previously filtered by hit into play but I think that's wrong 
-                                #because for this you want to count the outs...
+  filter(player_name == "Judge, Aaron", description == "hit_into_play") #hit into play so we don't include
+                                                    #things like fouls that still have LA and EV
 
 judge_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = judge_stat_density, color = "white") + 
   labs(title = "Judge's Density Over wOBA Values for LA and EV")
@@ -53,7 +53,7 @@ expected_stats_2019 %>%
 
 #David Fletcher
 fletcher_stat_density <- batter_all_2019 %>%
-  filter(player_name == "Fletcher, David") 
+  filter(player_name == "Fletcher, David", description == "hit_into_play") 
 
 fletcher_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = fletcher_stat_density, color = "white") + 
   labs(title = "Fletcher's Density Over wOBA Values for LA and EV")
@@ -67,4 +67,28 @@ expected_stats_2019 %>%
 #Fletcher hits at a much lower velocity BUT is located at that sweet spot for the angle that allows him
 #to get that band of singles. AND GUESS WHAT??? THEIR WOBAs ARE SUPER SIMILAR!!
 
+#Michael Brantley : very ground ball hitter
+brantley_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Brantley, Michael", description == "hit_into_play") 
 
+brantley_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = brantley_stat_density, color = "white") + 
+  labs(title = "Brantley's Density Over wOBA Values for LA and EV")
+
+expected_stats_2019 %>%
+  filter(name == "Brantley, Michael") %>%        #wOBA for the season = .367
+  select(woba)
+
+#Brantley has some high EVs (not the higest but still up there); maybe would be better if upped the LA?
+
+#Mike Trout
+trout_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+
+trout_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = trout_stat_density, color = "white") + 
+  labs(title = "Trout's Density Over wOBA Values for LA and EV")
+
+expected_stats_2019 %>%
+  filter(name == "Trout, Mike") %>%        #wOBA for the season = .436
+  select(woba)
+
+#does a FANTASTIC job centering around that HR clump; odd little clump in the high LAs
