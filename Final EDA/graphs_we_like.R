@@ -10,6 +10,7 @@ pal2 <- park_palette("Everglades")
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
 #wOBA vs. launch angle by exit velos -------------------------------------------------------------------
+#https://twitter.com/ckurcon/status/1362028697860063232
 
 #get all balls in play  
 in_play_2019 <- batter_all_2019 %>%
