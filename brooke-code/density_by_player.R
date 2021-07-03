@@ -1,6 +1,6 @@
 library(tidyverse)
 
-# Loading Data ------------------------------------------------------------
+# Loading Data ----------------------------------------------------------
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
@@ -31,15 +31,38 @@ woba_by_LA_EV <- batter_all_2019 %>%
   ggplot(aes(x=launch_angle, y = launch_speed, color = woba_value)) +
   geom_point(alpha = 0.5) + 
   scale_x_continuous(n.breaks = 15, limits = c(-60, 90)) + 
+  scale_color_gradient(low = "darkblue", high = "darkorange") +
   labs(x = "launch angle", y = "exit velocity (mph)", 
        title = "wOBA by launch angle and exit velocity", color = "") +
   theme_minimal()
 
-#add density later
+#add density layer
 swanson_data <- batter_all_2019 %>%
   filter(player_name == "Swanson, Dansby",
          description == "hit_into_play")
 
-woba_by_LA_EV_Density <- woba_by_LA_EV + 
+swanson_woba_by_LA_EV_Density <- woba_by_LA_EV + 
   stat_density_2d(data = swanson_data, color = "white")
+
+harper_data <- batter_all_2019 %>%
+  filter(player_name == "Harper, Bryce",
+         description == "hit_into_play")
+
+harper_woba_by_LA_EV_Density <- woba_by_LA_EV + 
+  stat_density_2d(data = harper_data, color = "white")
+
+yelich_data <- batter_all_2019 %>%
+  filter(player_name == "Yelich, Christian",
+         description == "hit_into_play")
+
+yelich_woba_by_LA_EV_Density <- woba_by_LA_EV + 
+  stat_density_2d(data = yelich_data, color = "white")
+
+bellinger_data <- batter_all_2019 %>%
+  filter(player_name == "Bellinger, Cody",
+         description == "hit_into_play")
+
+bellinger_woba_by_LA_EV_Density <- woba_by_LA_EV + 
+  stat_density_2d(data = yelich_data, color = "white")
+
   
