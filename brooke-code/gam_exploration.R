@@ -22,45 +22,56 @@ woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed),
                   data = batter_all_2019, method = "REML")
 
 #testing our model with a few players 
-mike_trout <- batter_all_2021 %>%
+mike_trout <- batter_all_2019 %>%
   filter(player_name == "Trout, Mike", description == "hit_into_play") 
 
-jason_heyward <- batter_all_2021 %>%
-  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+aaron_judge <- batter_all_2019 %>%
+  filter(player_name == "Judge, Aaron", description == "hit_into_play")
 
-tibbletest <- tibble(gam.preds = predict(woba_model, newdata = jason_heyward))
-mean(tibbletest$gam.preds, na.rm = TRUE)
+david_fletcher <- batter_all_2019 %>%
+  filter(player_name == "Fletcher, David", description == "hit_into_play") 
 
 #function purpose: given the predicted average wOBA, increase the all the launch 
 #angles by 1 degree, if the wOBA increases after doing this, repeat process
 #if it decreases, stop and go back to previous launch angles 
 
-set.seed(5130)
-changing_launch_angle <- function(player_data, woba_model) {
+changing_launch_angle <- function(player_data, woba_model, net_change) {
   #create tibble of predicted using model
   tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
   #find mean woba
   woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
   
   #begin by increasing launch angles by 1 to see what happens to mean 
-  player_data$launch_angle <- player_data$launch_angle + 1
-  new_tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
-  new_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
+  add_player_data <- player_data
+  add_player_data$launch_angle <- player_data$launch_angle + 1
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = add_player_data))
+  add_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
   
-  while(flag == TRUE) {
-    if(new_woba_mean > woba_mean){
-      #increase launch angles 
-      player_data$launch_angle <- player_data$launch_angle + 1
-      flag = TRUE
-    } else {
-      #else less than or equal, revert back to previous launch angles
-      player_data$launch_angle <- player_data$launch_angle - 1
-      flag = FALSE
-    }
+  #begin by decreasing launch angles by 1 to see what happens to mean 
+  subtract_player_data <- player_data
+  subtract_player_data$launch_angle <- player_data$launch_angle - 1
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = subtract_player_data))
+  subtract_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
+  
+  #if increasing the angles leads to a greater woba
+  if (add_woba_mean > woba_mean) {
+    #increase the angles again
+    net_change <- net_change + 1
+    changing_launch_angle(add_player_data, woba_model, net_change)
+  } else if (subtract_woba_mean > woba_mean) {
+    #decrease the angles again 
+    net_change <- net_change -1
+    changing_launch_angle(subtract_player_data, woba_model, net_change)
+  } else {
+    #no change 
+    return (tibble(wOBA = woba_mean, avg_launch_angle = mean(player_data$launch_angle, na.rm = TRUE), 
+            chng_in_angle = net_change))
   }
 }
-
-
+    
+changing_launch_angle(mike_trout, woba_model, 0)
+changing_launch_angle(aaron_judge, woba_model, 0)
+changing_launch_angle(david_fletcher, woba_model, 0)
 
 
 
