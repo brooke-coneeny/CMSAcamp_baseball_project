@@ -19,7 +19,7 @@ may_week2 <- scrape_statcast_savant_batter_all(start_date = "2021-05-08",
 may_week3 <- scrape_statcast_savant_batter_all(start_date = "2021-05-15",
                                                end_date = "2021-05-22")
 may_week4 <- scrape_statcast_savant_batter_all(start_date = "2021-05-23",
-                                               end_date = "2021-05-31"),
+                                               end_date = "2021-05-31")
 june_week1 <- scrape_statcast_savant_batter_all(start_date = "2021-06-01",
                                                  end_date = "2021-06-07")
 june_week2 <- scrape_statcast_savant_batter_all(start_date = "2021-06-08",
@@ -27,7 +27,7 @@ june_week2 <- scrape_statcast_savant_batter_all(start_date = "2021-06-08",
 june_week3 <- scrape_statcast_savant_batter_all(start_date = "2021-06-15",
                                                  end_date = "2021-06-22")
 june_week4 <- scrape_statcast_savant_batter_all(start_date = "2021-06-23",
-                                                 end_date = "2021-06-30"),
+                                                 end_date = "2021-06-30")
 july_week1 <- scrape_statcast_savant_batter_all(start_date = "2021-07-01",
                                                  end_date = "2021-07-06")
 
@@ -37,8 +37,5 @@ batter_all_2021 <- bind_rows(april_week1, april_week2, april_week3, april_week4,
                      june_week3, june_week4, july_week1)
 
 # Write 2021 data to rds --------------------------------------------------
-
-write_rds(batter_all_2021, "private_data/all2021data.rds")
-
 
 write_rds(batter_all_2021, "private_data/all2021data.rds")
