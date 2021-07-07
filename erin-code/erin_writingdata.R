@@ -1,3 +1,5 @@
+#write 2020 data 
+
 july20 <- scrape_statcast_savant_batter_all(start_date = "2020-07-23",
                                             end_date = "2020-07-31")
 aug201 <- scrape_statcast_savant_batter_all(start_date = "2020-08-01",

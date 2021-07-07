@@ -104,15 +104,26 @@ expected_stats_2019 %>%
   filter(name == "Belt, Brandon") %>%        #wOBA for the season = .319
   select(woba)
 
+hist(belt_stat_density$launch_speed, n=25)
+
 #Joey Gallo: supposedly hits in the air because when he hits ground balls its always into the shift
 gallo_stat_density <- batter_all_2019 %>%
   filter(player_name == "Gallo, Joey", description == "hit_into_play") 
 
 gallo_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = gallo_stat_density, color = "white") + 
-  labs(title = "Trout's Density Over wOBA Values for LA and EV")
+  labs(title = "Gallo's Density Over wOBA Values for LA and EV")
 
 expected_stats_2019 %>%
   filter(name == "Gallo, Joey") %>%        #wOBA for the season = .401
   select(woba)
 
 #should def keep hitting at that higher launch angle
+
+##Yandy Diaz --------------------------------------------------------
+
+diaz_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Díaz, Yandy", description == "hit_into_play") 
+
+diaz_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = diaz_stat_density, color = "white") + 
+  labs(title = "Diaz's Density Over wOBA Values for LA and EV")
+

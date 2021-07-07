@@ -54,3 +54,13 @@ expected_stats_2019 %>%
 #his batting average a considerable amount. If he can adopt this launch angle more often and also steers away from another 
 #fairly common -20 degree launch angle that he has, he may see a lot more singles and a lot less groundouts to second base. 
 
+#David Fletcher
+fletcher_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Fletcher, David", description == "hit_into_play") 
+
+fletcher_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = fletcher_stat_density, color = "white") + 
+  labs(title = "Fletcher's Density Over wOBA Values for LA and EV")
+
+expected_stats_2019 %>%
+  filter(first_name == "David" & last_name == "Fletcher") %>%        #wOBA for the season = .318
+  select(woba)

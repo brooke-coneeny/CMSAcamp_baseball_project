@@ -44,8 +44,6 @@ tibbletest <- tibble(gam.preds = predict(woba_model, newdata = jason_heyward))
 mean(tibbletest$gam.preds, na.rm = TRUE)
 
 
-
-
 #worse model
 woba_model2 <- gam(woba_value ~ s(launch_angle, k =10) + s(launch_speed, k=15), 
                    data = batter_all_2019, method = "REML", sp = 0.01)
