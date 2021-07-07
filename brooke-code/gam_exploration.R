@@ -19,7 +19,11 @@ batter_all_2019 %>%
 
 #our initial gam model 
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
+                 data = batter_all_2019, method = "REML") 
+woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle), 
                   data = batter_all_2019, method = "REML")
+summary(woba_model)
+summary(woba_model_interaction)
 
 #testing our model with a few players 
 mike_trout <- batter_all_2019 %>%
@@ -69,9 +73,9 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
   }
 }
     
-changing_launch_angle(mike_trout, woba_model, 0)
-changing_launch_angle(aaron_judge, woba_model, 0)
-changing_launch_angle(david_fletcher, woba_model, 0)
+changing_launch_angle(mike_trout, woba_model_interaction, 0)
+changing_launch_angle(aaron_judge, woba_model_interaction, 0)
+changing_launch_angle(david_fletcher, woba_model_interaction, 0)
 
 
 
