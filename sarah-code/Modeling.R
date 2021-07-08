@@ -4,6 +4,7 @@ library(mgcv)
 # Loading Data ------------------------------------------------------------
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
+batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
 
 # Fitting First LM for wOBA/LA/EV (def don't use)-----------------------------------------
@@ -72,5 +73,13 @@ plus_one_LA <- function (model, data){
   }
 }
 
-plus_one_LA(woba_model, gallo_stat_density)
+#testing
+mike_trout <- batter_all_2021 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+jason_heyward <- batter_all_2021 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+
+
+plus_one_LA(woba_model, mike_trout)
+plus_one_LA(woba_model, jason_heyward)
 
