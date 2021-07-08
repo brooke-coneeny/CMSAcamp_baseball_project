@@ -1,9 +1,15 @@
 library(tidyverse)
 library(glmnet)
 library(mgcv)
+library(data.table)
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
+batter_all_2020 <- read_rds("private_data/all2020data.rds")
+
+batter_all_1921 <- bind_rows(batter_all_2019, batter_all_2020, batter_all_2021)
+batter_all_1921hp <- batter_all_1921 %>%
+  filter(description == "hit_into_play")
 
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                   data = batter_all_2019, method = "REML")
@@ -43,9 +49,26 @@ jason_heyward <- batter_all_2021 %>%
 tibbletest <- tibble(gam.preds = predict(woba_model, newdata = jason_heyward))
 mean(tibbletest$gam.preds, na.rm = TRUE)
 
+# modeling..interactions?-------------------------------------------------
 
-#worse model
-woba_model2 <- gam(woba_value ~ s(launch_angle, k =10) + s(launch_speed, k=15), 
-                   data = batter_all_2019, method = "REML", sp = 0.01)
+#create model training data
+set.seed(7821)
+batter_all_1921hp <- data.table(batter_all_1921hp)
+training_data <- batter_all_1921hp[sample(.N, 112042)]
+
+woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed), data = training_data, method = "REML")
+
+summary(woba_model2)
+coef(woba_model2)
+
+plot(woba_model2, scheme = 1)
+plot(woba_model2, scheme = 2)
+
+vis.gam(x=woba_model2, 
+        view = c("launch_angle", "launch_speed"), #variables
+        plot.type = "contour", #kind of plot
+        too.far = 0.05,  
+        contour.col = "black", 
+        nlevels = 20) #number of lines
 
 
