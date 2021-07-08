@@ -5,6 +5,7 @@ library(tidyverse)
 
 #data we are exploring 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
+batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
 #relationship between launch angle and exit velocity with wOBA
 #for a GAM model these relationships should not be linear 
@@ -26,13 +27,13 @@ summary(woba_model)
 summary(woba_model_interaction)
 
 #testing our model with a few players 
-mike_trout <- batter_all_2019 %>%
+mike_trout <- batter_all_2021 %>%
   filter(player_name == "Trout, Mike", description == "hit_into_play") 
 
-aaron_judge <- batter_all_2019 %>%
+aaron_judge <- batter_all_2021 %>%
   filter(player_name == "Judge, Aaron", description == "hit_into_play")
 
-david_fletcher <- batter_all_2019 %>%
+david_fletcher <- batter_all_2021 %>%
   filter(player_name == "Fletcher, David", description == "hit_into_play") 
 
 #function purpose: given the predicted average wOBA, increase the all the launch 
