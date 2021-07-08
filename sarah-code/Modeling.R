@@ -29,6 +29,26 @@ woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed),
                   data = batter_all_2019, method = "REML")
 
 
+made_up_data <- expand.grid(launch_angle = seq(-50,70,2), launch_speed = seq(50,110,2))
+made_up_preds <- tibble(gam.preds = predict(woba_model, newdata = made_up_data)) 
+test <- bind_cols(made_up_data, made_up_preds)
+
+test %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, fill = gam.preds)) +
+  geom_raster() + theme_bw()
+
+#GAM model with 1 interaction term -------------------------------------
+
+woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed), data = batter_all_2019, method = "REML")
+
+made_up_preds2 <- tibble(gam.preds = predict(woba_model2, newdata = made_up_data)) 
+test2 <- bind_cols(made_up_data, made_up_preds2)
+
+test2 %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, fill = gam.preds)) +
+  geom_raster() + theme_bw()
+
+  
 # Function to manually adjust launch angles -------------------------------
 
 plus_one_LA <- function (model, data){
