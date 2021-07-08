@@ -123,13 +123,12 @@ tt_preds <- plogis(tt$hr.preds)
 mean(tt_preds, na.rm = TRUE) #turner with 5.4% probability 
 
 #see their actual percentages 
-hrs_by_players <- batter_all_1921hp %>%
-  mutate(homerun = events == "home_run") %>%
+hrs_by_players <- test_mlb_data %>%
   filter(player_name %in% c("Trout, Mike", "Turner, Trea", "Heyward, Jason", "Gallo, Joey")) %>%
   group_by(player_name) %>%
   summarize(hrs = sum(homerun))
 
-into_play <- batter_all_1921hp %>%
+into_play <- test_mlb_data %>%
   filter(player_name %in% c("Trout, Mike", "Turner, Trea", "Heyward, Jason", "Gallo, Joey")) %>%
   group_by(player_name) %>%
   count()
