@@ -76,7 +76,7 @@ vis.gam(x=woba_model2,
         contour.col = "black", 
         nlevels = 20) #number of lines
 
-#logistic model for predicting whether a player hit a homerun---------------
+#logistic model for predicting the probability of a player hitting a homerun---------------
 
 #add a binary homerun variable to training and test data 
 train_mlb_data <- train_mlb_data %>%
