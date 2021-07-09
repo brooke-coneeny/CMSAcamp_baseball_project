@@ -2,6 +2,7 @@
 library(glmnet)
 library(mgcv)
 library(tidyverse)
+library(gratia)
 
 #data we are exploring 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
@@ -18,13 +19,30 @@ batter_all_2019 %>%
   ggplot(aes(x = launch_speed, y = woba_value)) +
   geom_smooth()
 
-#our initial gam model 
+#gam models
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                  data = batter_all_2019, method = "REML") 
-woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle), 
+
+woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 50), 
                   data = batter_all_2019, method = "REML")
+
+woba_model_interaction_intercepts <- gam(woba_value ~ s(launch_speed) + 
+                  s(launch_angle) + ti(launch_speed, launch_angle),
+                  data = batter_all_2019, method = "REML")
+
 summary(woba_model)
 summary(woba_model_interaction)
+summary(woba_model_interaction_intercepts)
+
+#visualize partial response variables
+draw(woba_model)
+draw(woba_model_interaction)
+draw(woba_model_interaction_intercepts)
+
+#check for number of basis functions
+gam.check(woba_model)
+gam.check(woba_model_interaction)
+gam.check(woba_model_interaction_interacpts) #gets a different type of output 
 
 #testing our model with a few players 
 mike_trout <- batter_all_2021 %>%
