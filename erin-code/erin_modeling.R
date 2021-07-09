@@ -3,6 +3,7 @@ library(glmnet)
 library(mgcv)
 library(data.table)
 library(caret)
+library(gratia)
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
@@ -76,7 +77,7 @@ vis.gam(x=woba_model2,
         contour.col = "black", 
         nlevels = 20) #number of lines
 
-#logistic model for predicting the probability of a player hitting a homerun---------------
+#logistic model for predicting homeruns------------------------------------
 
 #add a binary homerun variable to training and test data 
 train_mlb_data <- train_mlb_data %>%
@@ -90,7 +91,21 @@ homerun_mod <- gam(homerun ~ s(launch_speed, launch_angle), data = train_mlb_dat
                method = "REML")
 summary(homerun_mod)
 
-#test model on jason heyward
+#plot the model
+plot(homerun_mod)
+draw(homerun_mod, fun = plogis, 
+     constant = coef(homerun_mod)[1])
+
+#model without interaction
+homerun_mod_nointeract <- gam(homerun ~ s(launch_speed)+ s(launch_angle), data = train_mlb_data, 
+                   family = binomial,
+                   method = "REML")
+summary(homerun_mod_nointeract)
+draw(homerun_mod_nointeract, fun = plogis, 
+     constant = coef(homerun_mod_nointeract)[1], 
+     pages = 1)
+
+#test model with interaction on jason heyward
 jason_heyward2 <- test_mlb_data %>%
   filter(player_name == "Heyward, Jason", description == "hit_into_play") 
 
