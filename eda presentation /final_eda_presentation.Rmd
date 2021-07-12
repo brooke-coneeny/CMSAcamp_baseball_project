@@ -109,6 +109,6 @@ wOBA_angle_velo_graph_3
 
 # Data
 
-
+- We started our project by analyzing the last full season of MLB data (2019)
 ---
 
