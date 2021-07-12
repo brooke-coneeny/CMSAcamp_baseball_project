@@ -82,8 +82,11 @@ test3 %>%
 
 # Holdout Predictions -----------------------------------------------------
 
+#creates the test fold
 set.seed(2020)
 batter_all_1921hp <- batter_all_1921hp %>% mutate(test_fold = sample(rep(1:5, length.out = n())))
+
+#calculates predictions for 5 fold cross validation for a variety of models
 holdout_predictions <-
   map_dfr(unique(batter_all_1921hp$test_fold),
           function(holdout){
@@ -106,6 +109,7 @@ holdout_predictions <-
                    test_actual = test_data$woba_value, test_fold = holdout)
           })
 
+# Graphs RMSEs for each model tested
 # Tells us we should DEF use the model 2 (one interaction term) which is what I expected
 holdout_predictions %>%
   pivot_longer(no_interaction_preds:three_terms_preds,
@@ -120,7 +124,45 @@ holdout_predictions %>%
   stat_summary(fun.data = mean_se,
                geom = "errorbar", color = "red")
 
-#COULD CONSIDER DOING THE SAME THING WITH DIFFERENT K'S TO FIND THE BEST MODEL
+
+# Tuning k by cross validation --------------------------------------------
+
+#calculates predictions for 5 fold cross validation for a variety of models
+holdout_predictions_k <-
+  map_dfr(unique(batter_all_1921hp$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_1921hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_1921hp %>% filter(test_fold != holdout)
+            
+            # Train models:
+            model_45 <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = batter_all_2019, 
+                            method = "REML")
+            model_50 <- gam(woba_value ~ s(launch_angle, launch_speed, k=50), data = batter_all_2019, 
+                            method = "REML")
+            model_55 <- gam(woba_value ~ s(launch_angle, launch_speed, k=55), data = batter_all_2019, 
+                            method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(model_45_preds = predict(model_45, newdata = test_data),
+                   model_50_preds = predict(model_50, newdata = test_data),
+                   model_55_preds = predict(model_55, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          })
+
+# Graphs RMSEs for each model tested
+holdout_predictions_k %>%
+  pivot_longer(model_45_preds:model_55_preds,
+               names_to = "type", values_to = "test_preds") %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x=type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point",
+               color = "red") +
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar", color = "red")
   
 # Function to manually adjust launch angles -------------------------------
 
