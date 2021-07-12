@@ -181,6 +181,14 @@ mean_speed$nameLast <- gsub(",$", "", mean_speed$nameLast)
 
 batter_and_height <- left_join(people, mean_speed, by = c("nameLast", "nameFirst"))
 
+#Erin's attempt
+people <- people %>%
+  filter(!is.na(height)) %>%
+  mutate(height = as.numeric(height))
+batter_and_height <- people %>%
+  right_join(mean_speed, by = c("nameLast", "nameFirst"))
+
+
 batter_and_height %>%
   ggplot(aes(x = height, y = mean_ev)) +
   geom_point()
