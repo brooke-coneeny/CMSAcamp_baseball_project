@@ -164,10 +164,14 @@ batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
 people <- select(tbl_df(People), height, nameLast, nameFirst)
 
+people <- people %>%
+  filter(!is.na(height)) %>%
+  mutate(height = as.numeric(height))
+
 mean_speed <- batter_all_2019 %>%
   mutate(
-    nameFirst = word(player_name,1), 
-    nameLast = word(player_name,2)
+    nameLast = word(player_name,1), 
+    nameFirst = word(player_name,2)
   ) %>%
   filter(!is.na(launch_speed)) %>%
   group_by(nameLast, nameFirst) %>%
@@ -179,8 +183,6 @@ mean_speed <- batter_all_2019 %>%
 mean_speed$nameFirst <- gsub(",$", "", mean_speed$nameFirst)
 mean_speed$nameLast <- gsub(",$", "", mean_speed$nameLast)
 
-batter_and_height <- left_join(people, mean_speed, by = c("nameLast", "nameFirst"))
+batter_and_height <- mean_speed %>%
+  left_join(people, by = c("nameLast", "nameFirst"))
 
-batter_and_height %>%
-  ggplot(aes(x = height, y = mean_ev)) +
-  geom_point()
