@@ -44,16 +44,6 @@ gam.check(woba_model)
 gam.check(woba_model_interaction)
 gam.check(woba_model_interaction_interacpts) #gets a different type of output 
 
-#testing our model with a few players 
-mike_trout <- batter_all_2021 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play") 
-
-aaron_judge <- batter_all_2021 %>%
-  filter(player_name == "Judge, Aaron", description == "hit_into_play")
-
-david_fletcher <- batter_all_2021 %>%
-  filter(player_name == "Fletcher, David", description == "hit_into_play") 
-
 #function purpose: given the predicted average wOBA, increase the all the launch 
 #angles by 1 degree, if the wOBA increases after doing this, repeat process
 #if it decreases, stop and go back to previous launch angles 
@@ -91,11 +81,22 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
             chng_in_angle = net_change))
   }
 }
-    
+
+#testing our model with a few players 
+mike_trout <- batter_all_2021 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+
+aaron_judge <- batter_all_2021 %>%
+  filter(player_name == "Judge, Aaron", description == "hit_into_play")
+
+david_fletcher <- batter_all_2021 %>%
+  filter(player_name == "Fletcher, David", description == "hit_into_play") 
+
 changing_launch_angle(mike_trout, woba_model_interaction, 0)
 changing_launch_angle(aaron_judge, woba_model_interaction, 0)
 changing_launch_angle(david_fletcher, woba_model_interaction, 0)
 
+#cross validation 
 
 
 
