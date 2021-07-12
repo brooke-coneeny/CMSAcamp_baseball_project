@@ -2,6 +2,7 @@ library(baseballr)
 library(dplyr)
 library(tidyverse)
 library(patchwork)
+library(Lahman)
 
 batting_data <- read_rds("private_data/all2019data.rds")
 
@@ -155,7 +156,31 @@ launch_angle_outcomes <- batting_data %>%
   theme(
     axis.title.x = element_blank(),
   ) 
-  
-  
 
-  
+#Examining trends in height 
+library(Lahman)
+library(stringr)
+batter_all_2019 <- read_rds("private_data/all2019data.rds")
+
+people <- select(tbl_df(People), height, nameLast, nameFirst)
+
+mean_speed <- batter_all_2019 %>%
+  mutate(
+    nameFirst = word(player_name,1), 
+    nameLast = word(player_name,2)
+  ) %>%
+  filter(!is.na(launch_speed)) %>%
+  group_by(nameLast, nameFirst) %>%
+  summarise(
+    mean_ev = mean(launch_speed)
+  ) %>%
+  ungroup()
+
+mean_speed$nameFirst <- gsub(",$", "", mean_speed$nameFirst)
+mean_speed$nameLast <- gsub(",$", "", mean_speed$nameLast)
+
+batter_and_height <- left_join(people, mean_speed, by = c("nameLast", "nameFirst"))
+
+batter_and_height %>%
+  ggplot(aes(x = height, y = mean_ev)) +
+  geom_point()
