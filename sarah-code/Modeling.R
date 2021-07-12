@@ -4,6 +4,8 @@ library(mgcv)
 # Loading Data ------------------------------------------------------------
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
+batter_all_2019hp <- batter_all_2019 %>%
+  filter(description == "hit_into_play")
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
@@ -85,22 +87,23 @@ test3 %>%
 #creates the test fold
 set.seed(2020)
 batter_all_1921hp <- batter_all_1921hp %>% mutate(test_fold = sample(rep(1:5, length.out = n())))
+batter_all_2019hp <- batter_all_2019hp %>% mutate(test_fold = sample(rep(1:5, length.out = n())))
 
 #calculates predictions for 5 fold cross validation for a variety of models
 holdout_predictions <-
-  map_dfr(unique(batter_all_1921hp$test_fold),
+  map_dfr(unique(batter_all_2019hp$test_fold),
           function(holdout){
             # Separate test and training data:
-            test_data <- batter_all_1921hp %>% filter(test_fold == holdout)
-            train_data <- batter_all_1921hp %>% filter(test_fold != holdout)
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
             
             # Train models:
             no_interaction_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
-                                        data = batter_all_2019, method = "REML")
-            interaction_model <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = batter_all_2019, 
+                                        data = train_data, method = "REML")
+            interaction_model <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = train_data, 
                                      method = "REML")
             three_term_model <- gam(woba_value ~ s(launch_speed) + s(launch_angle) + ti(launch_speed, launch_angle),
-                                    data = batter_all_2019, method = "REML")
+                                    data = train_data, method = "REML")
             
             # Return tibble of holdout results:
             tibble(no_interaction_preds = predict(no_interaction_model, newdata = test_data),
@@ -129,30 +132,39 @@ holdout_predictions %>%
 
 #calculates predictions for 5 fold cross validation for a variety of models
 holdout_predictions_k <-
-  map_dfr(unique(batter_all_1921hp$test_fold),
+  map_dfr(unique(batter_all_2019hp$test_fold),
           function(holdout){
             # Separate test and training data:
-            test_data <- batter_all_1921hp %>% filter(test_fold == holdout)
-            train_data <- batter_all_1921hp %>% filter(test_fold != holdout)
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
             
             # Train models:
-            model_45 <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = batter_all_2019, 
+            model_40 <- gam(woba_value ~ s(launch_angle, launch_speed, k=40), data = train_data, 
                             method = "REML")
-            model_50 <- gam(woba_value ~ s(launch_angle, launch_speed, k=50), data = batter_all_2019, 
+            model_45 <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = train_data, 
                             method = "REML")
-            model_55 <- gam(woba_value ~ s(launch_angle, launch_speed, k=55), data = batter_all_2019, 
+            model_50 <- gam(woba_value ~ s(launch_angle, launch_speed, k=50), data = train_data, 
+                            method = "REML")
+            model_55 <- gam(woba_value ~ s(launch_angle, launch_speed, k=55), data = train_data, 
+                            method = "REML")
+            model_60 <- gam(woba_value ~ s(launch_angle, launch_speed, k=60), data = train_data, 
+                            method = "REML")
+            model_65 <- gam(woba_value ~ s(launch_angle, launch_speed, k=65), data = train_data, 
                             method = "REML")
             
             # Return tibble of holdout results:
-            tibble(model_45_preds = predict(model_45, newdata = test_data),
+            tibble(model_40_preds = predict(model_40, newdata = test_data),
+                   model_45_preds = predict(model_45, newdata = test_data),
                    model_50_preds = predict(model_50, newdata = test_data),
                    model_55_preds = predict(model_55, newdata = test_data),
+                   model_60_preds = predict(model_60, newdata = test_data),
+                   model_65_preds = predict(model_65, newdata = test_data),
                    test_actual = test_data$woba_value, test_fold = holdout)
           })
 
 # Graphs RMSEs for each model tested
 holdout_predictions_k %>%
-  pivot_longer(model_45_preds:model_55_preds,
+  pivot_longer(model_40_preds:model_65_preds,
                names_to = "type", values_to = "test_preds") %>%
   group_by(type, test_fold) %>%
   summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
