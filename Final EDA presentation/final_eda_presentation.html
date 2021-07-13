@@ -4,7 +4,7 @@
     <title>EDA: Maximzing WOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-07-12" />
+    <meta name="date" content="2021-07-13" />
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -13,7 +13,7 @@ class: center, middle, inverse, title-slide
 
 # EDA: Maximzing WOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-07-12
+### 2021-07-13
 
 ---
 
@@ -42,11 +42,103 @@ class: center, middle, inverse, title-slide
 ]
 
 ---
-
-
 # Data
 
-- We started our project by analyzing the last full season of MLB data (2019)
+- Most of our EDA graphs use 2019 MLB data, the last 162 game season
+- Data is taken from Statcast on Baseball Savant
+- Variables
+  - We are interested in modeling **woba** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the EDA process include **battter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+  
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; player &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; exit velocity &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; launch angle &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; wOBA &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; outcome &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Zobrist, Ben &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 88.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Mazara, Nomar &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 90.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Duda, Lucas &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 106.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; McCann, Brian &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 96.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 29 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Hernández, Enrique &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 89.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Muncy, Max &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 97.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 44 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+# Hit outcome by launch angle and exit velocity 
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-5-1.png" width="1080" style="display: block; margin: auto;" /&gt;
+---
+#Breaking down the previous graph proportionally...
+
+.pull-left[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-6-1.png" width="504" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-7-1.png" width="504" style="display: block; margin: auto;" /&gt;
+]
+---
+## Infield alignment did not impact the distribution of events at each angle grouping
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-8-1.png" width="1080" style="display: block; margin: auto;" /&gt;
+---
+## Pitch type doesn't seem to have an impact either
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-9-1.png" width="1080" style="display: block; margin: auto;" /&gt;
+---
+
+### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
+
+.pull-left[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-10-1.png" width="576" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-11-1.png" width="504" style="display: block; margin: auto;" /&gt;
+]
 ---
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>

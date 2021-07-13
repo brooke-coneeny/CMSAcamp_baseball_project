@@ -105,10 +105,216 @@ wOBA_angle_velo_graph_3
 ]
 
 ---
-
-
 # Data
 
-- We started our project by analyzing the last full season of MLB data (2019)
+- Most of our EDA graphs use 2019 MLB data, the last 162 game season
+- Data is taken from Statcast on Baseball Savant
+- Variables
+  - We are interested in modeling **woba** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the EDA process include **battter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+  
+```{r out.width='30%', echo = FALSE, fig.align='center'}
+data_example <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  rename(`player` = player_name, `exit velocity` = launch_speed, `launch angle` = launch_angle, wOBA = woba_value, outcome = events) %>%
+  select(player, `exit velocity`, `launch angle`, wOBA, outcome)
+knitr::kable(head(data_example), format = 'html')
+```
+---
+# Hit outcome by launch angle and exit velocity 
+
+```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+library(nationalparkcolors)
+pal2 <- park_palette("Everglades")
+
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run")) %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = events_group)) +
+  geom_point(alpha = 0.75) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_manual(values = rev(pal2))+
+  labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+```
+---
+#Breaking down the previous graph proportionally...
+
+.pull-left[
+```{r, fig.width = 7, fig.height = 5, echo = FALSE, fig.align='center'}
+launch_angle_outcomes <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(
+    events_group = case_when(
+      events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                    "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                    "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+      events == "single" ~ "single",
+      events == "double" ~ "double", 
+      events == "triple" ~ "triple", 
+      events == "home_run" ~ "home run", 
+      TRUE ~ "other"),
+    launch_angle_group = cut(
+      launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(
+    events_group %in% c("out", "single", "double", "triple", "home run"),
+    !is.na(launch_angle_group)
+  ) %>%
+  select(events_group, launch_angle_group) %>%
+  ggplot(mapping = aes(x = launch_angle_group, fill = events_group)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = pal2)+
+  theme_classic() +
+  theme(
+    axis.title.x = element_blank(),
+    legend.position = "none"
+  )
+launch_angle_outcomes
+```
+]
+
+.pull-right[
+```{r, fig.width = 7, fig.height = 5, echo = FALSE, fig.align='center'}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run"), 
+         launch_angle >= -20 & launch_angle <=50) %>%
+  mutate(launch_angle_group = 
+           cut(launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(!is.na(launch_angle_group)) %>%
+  ggplot(aes(x = launch_angle_group, fill = events_group))+
+  geom_bar(position = "fill")+
+  scale_fill_manual(values = pal2)+
+  labs(x = "launch angle", y= "", fill = "")+
+  theme_minimal()
+```
+]
+---
+## Infield alignment did not impact the distribution of events at each angle grouping
+
+```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+faceted_by_alignment <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home_run", 
+    TRUE ~ "other")) %>%
+  filter(if_fielding_alignment %in% c("Infield shift", "Standard", "Strategic")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home_run"), 
+         launch_angle >= -20 & launch_angle <=50) %>%
+  mutate(launch_angle_group = 
+           cut(launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(!is.na(launch_angle_group)) %>%
+  ggplot(aes(x = launch_angle_group, fill = events_group))+
+  geom_bar(position = "fill")+
+  scale_fill_manual(values = pal2)+
+  facet_wrap(~if_fielding_alignment, ncol = 1)+
+  labs(x = "launch angle", y="", fill = "")+
+  theme_minimal()
+faceted_by_alignment
+```
+---
+## Pitch type doesn't seem to have an impact either
+
+```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+outcome_faceted <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run")) %>%
+  mutate(pitch_group = case_when(
+    pitch_name %in% c("4-Seam Fastball", "Fastball", "Cutter", "Sinker", "2-Seam Fastball") ~ "Fastball", 
+    pitch_name %in% c("Changeup", "Split-Finger", "Screwball") ~ "Offspeed", 
+    pitch_name %in% c("Slider", "Knuckle Curve", "Curveball", "Knuckle Curve", 
+                      "Knuckleball", "Eephus") ~ "Breaking", 
+    TRUE ~ pitch_name
+  )) %>%
+  filter(!is.na(pitch_group) & pitch_group %in% c("Offspeed", "Breaking", "Fastball")) %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = events_group)) +
+  geom_point(alpha = 0.75) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_manual(values = rev(pal2))+
+  facet_wrap(~pitch_group, ncol = 1)+
+  labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
+  theme_minimal()
+outcome_faceted
+```
+---
+
+### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
+
+.pull-left[
+```{r, fig.width = 8, fig.height = 5, echo = FALSE, fig.align='center'}
+wOBA_by_LA_EV <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = woba_value)) +
+  geom_point(alpha = 0.5) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_gradient(low = "darkblue", high = "darkorange")+
+  labs(x = "launch angle", y = "exit velocity (mph)", 
+       title = "wOBA Value by launch angle and exit velocity", color = "wOBA Value")+
+  theme_minimal()+
+  theme(
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank()
+  )
+
+trout_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+
+trout_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = trout_stat_density, color = "white") + 
+  labs(title = "Mike Trout")
+trout_density_2019
+```
+]
+
+.pull-right[
+```{r, fig.width = 7, fig.height = 5, echo = FALSE, fig.align='center'}
+fletcher_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Fletcher, David", description == "hit_into_play") 
+
+fletcher_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = fletcher_stat_density, color = "white") + 
+  labs(title = "David Fletcher")+
+  theme(legend.position = "none")
+
+fletcher_density_2019
+```
+]
 ---
 
