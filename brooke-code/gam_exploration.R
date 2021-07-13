@@ -82,21 +82,7 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
   }
 }
 
-#testing our model with a few players 
-mike_trout <- batter_all_2021 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play") 
 
-aaron_judge <- batter_all_2021 %>%
-  filter(player_name == "Judge, Aaron", description == "hit_into_play")
-
-david_fletcher <- batter_all_2021 %>%
-  filter(player_name == "Fletcher, David", description == "hit_into_play") 
-
-changing_launch_angle(mike_trout, woba_model_interaction, 0)
-changing_launch_angle(aaron_judge, woba_model_interaction, 0)
-changing_launch_angle(david_fletcher, woba_model_interaction, 0)
-
-#cross validation 
 
 
 
