@@ -44,16 +44,6 @@ gam.check(woba_model)
 gam.check(woba_model_interaction)
 gam.check(woba_model_interaction_interacpts) #gets a different type of output 
 
-#testing our model with a few players 
-mike_trout <- batter_all_2021 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play") 
-
-aaron_judge <- batter_all_2021 %>%
-  filter(player_name == "Judge, Aaron", description == "hit_into_play")
-
-david_fletcher <- batter_all_2021 %>%
-  filter(player_name == "Fletcher, David", description == "hit_into_play") 
-
 #function purpose: given the predicted average wOBA, increase the all the launch 
 #angles by 1 degree, if the wOBA increases after doing this, repeat process
 #if it decreases, stop and go back to previous launch angles 
@@ -91,11 +81,46 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
             chng_in_angle = net_change))
   }
 }
-    
-changing_launch_angle(mike_trout, woba_model_interaction, 0)
-changing_launch_angle(aaron_judge, woba_model_interaction, 0)
-changing_launch_angle(david_fletcher, woba_model_interaction, 0)
 
+#train and test model with cross validation and rmse 
+set.seed(2001)
+batter_all_2019 <- batter_all_2019 %>% 
+  filter(description == "hit_into_play") %>%
+  mutate(test_fold = sample(rep(1:5, length.out = n())))
+
+holdout_predictions <-
+  map_dfr(unique(batter_all_2019$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019 %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019 %>% filter(test_fold != holdout)
+            
+            # Train models:
+            woba_model_interaction <- gam(woba_value ~ s(launch_angle, launch_speed, k=45), data = train_data, 
+                                     method = "REML")
+            woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), data = train_data, 
+                                          method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(woba_model_interaction_preds = predict(woba_model_interaction, newdata = test_data),
+                   woba_model_preds = predict(woba_model, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          }
+  )
+
+
+holdout_predictions %>%
+  pivot_longer(
+    woba_model_interaction_preds:woba_model_preds,
+    names_to = "type", values_to = "test_preds"
+  ) %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x = type, y = rmse)) +
+    geom_point() +
+    theme_bw() +
+    stat_summary(fun = mean, geom = "point", color = "red") +
+    stat_summary(fun.data = mean_se, geom = "errorbar", color = "red")
 
 
 
