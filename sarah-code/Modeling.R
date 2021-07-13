@@ -14,22 +14,6 @@ batter_all_1921hp <- batter_all_1921 %>%
   filter(description == "hit_into_play")
 
 
-# Fitting First LM for wOBA/LA/EV (def don't use)-----------------------------------------
-
-
-init_lm_LA_EV <- lm(woba_value ~ launch_angle + launch_speed, data = batter_all_2019)
-summary(init_lm_LA_EV)
-library(ggfortify)
-autoplot(init_lm_LA_EV, ncol = 4) + theme_bw() #a HOT mess... (residualas a mess, QQ looks kinda decent,
-                                        # lots of high leverage points?)
-
-
-# GAM / Spline Model (not using)------------------------------------------------------
-
-gam_model1 <- gam(woba_value ~ s(launch_angle) + s(launch_speed), data = batter_all_2019)
-summary(gam_model1)
-
-
 # Erin's first go at GAM model --------------------------------------------
 
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
@@ -130,7 +114,7 @@ holdout_predictions %>%
 
 # Tuning k by cross validation --------------------------------------------
 
-#calculates predictions for 5 fold cross validation for a variety of models
+# Calculates predictions for 5 fold cross validation for a variety of models ks 40-65
 holdout_predictions_k <-
   map_dfr(unique(batter_all_2019hp$test_fold),
           function(holdout){
@@ -165,6 +149,127 @@ holdout_predictions_k <-
 # Graphs RMSEs for each model tested
 holdout_predictions_k %>%
   pivot_longer(model_40_preds:model_65_preds,
+               names_to = "type", values_to = "test_preds") %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x=type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point",
+               color = "red") +
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar", color = "red")
+
+# Calculates predictions for 5 fold cross validation for a variety of models ks 60-85
+holdout_predictions_k2 <-
+  map_dfr(unique(batter_all_2019hp$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
+            
+            # Train models:
+            model_60 <- gam(woba_value ~ s(launch_angle, launch_speed, k=60), data = train_data, 
+                            method = "REML")
+            model_65 <- gam(woba_value ~ s(launch_angle, launch_speed, k=65), data = train_data, 
+                            method = "REML")
+            model_70 <- gam(woba_value ~ s(launch_angle, launch_speed, k=70), data = train_data, 
+                            method = "REML")
+            model_75 <- gam(woba_value ~ s(launch_angle, launch_speed, k=75), data = train_data, 
+                            method = "REML")
+            model_80 <- gam(woba_value ~ s(launch_angle, launch_speed, k=80), data = train_data, 
+                            method = "REML")
+            model_85 <- gam(woba_value ~ s(launch_angle, launch_speed, k=85), data = train_data, 
+                            method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(model_60_preds = predict(model_60, newdata = test_data),
+                   model_65_preds = predict(model_65, newdata = test_data),
+                   model_70_preds = predict(model_70, newdata = test_data),
+                   model_75_preds = predict(model_75, newdata = test_data),
+                   model_80_preds = predict(model_80, newdata = test_data),
+                   model_85_preds = predict(model_85, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          })
+
+# Graphs RMSEs for each model tested ks 
+holdout_predictions_k2 %>%
+  pivot_longer(model_60_preds:model_85_preds,
+               names_to = "type", values_to = "test_preds") %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x=type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point",
+               color = "red") +
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar", color = "red")
+
+# Calculates predictions for 5 fold cross validation for a variety of models ks 80-95
+holdout_predictions_k3 <-
+  map_dfr(unique(batter_all_2019hp$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
+            
+            # Train models:
+            model_80 <- gam(woba_value ~ s(launch_angle, launch_speed, k=80), data = train_data, 
+                            method = "REML")
+            model_85 <- gam(woba_value ~ s(launch_angle, launch_speed, k=85), data = train_data, 
+                            method = "REML")
+            model_90 <- gam(woba_value ~ s(launch_angle, launch_speed, k=90), data = train_data, 
+                            method = "REML")
+            model_95 <- gam(woba_value ~ s(launch_angle, launch_speed, k=95), data = train_data, 
+                            method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(model_80_preds = predict(model_80, newdata = test_data),
+                   model_85_preds = predict(model_85, newdata = test_data),
+                   model_90_preds = predict(model_90, newdata = test_data),
+                   model_95_preds = predict(model_95, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          })
+
+# Graphs RMSEs for each model tested ks 
+holdout_predictions_k3 %>%
+  pivot_longer(model_80_preds:model_95_preds,
+               names_to = "type", values_to = "test_preds") %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x=type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point",
+               color = "red") +
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar", color = "red")
+
+# Calculates predictions for 5 fold cross validation for a variety of models trying to find lowest k
+  #s.t. it is still within 1se of the minimum
+holdout_predictions_k4 <-
+  map_dfr(unique(batter_all_2019hp$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
+            
+            # Train models:
+            model_75 <- gam(woba_value ~ s(launch_angle, launch_speed, k=65), data = train_data, 
+                            method = "REML")
+            model_155 <- gam(woba_value ~ s(launch_angle, launch_speed, k=135), data = train_data, 
+                            method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(model_75_preds = predict(model_75, newdata = test_data),
+                   model_155_preds = predict(model_155, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          })
+
+# Graphs RMSEs for each model tested ks 
+holdout_predictions_k4 %>%
+  pivot_longer(model_75_preds:model_155_preds,
                names_to = "type", values_to = "test_preds") %>%
   group_by(type, test_fold) %>%
   summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
