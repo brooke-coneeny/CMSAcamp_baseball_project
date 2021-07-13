@@ -23,7 +23,7 @@ batter_all_2019 %>%
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                  data = batter_all_2019, method = "REML") 
 
-woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 50), 
+woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 300), 
                   data = batter_all_2019, method = "REML")
 
 woba_model_interaction_intercepts <- gam(woba_value ~ s(launch_speed) + 
@@ -135,7 +135,7 @@ holdout_predictions %>%
 set.seed(2001)
 batter_all_2019 <- batter_all_2019 %>% 
   filter(description == "hit_into_play") %>%
-  mutate(test_fold = sample(rep(1:5, length.out = n())))
+  mutate(test_fold = sample(rep(1:3, length.out = n())))
 
 holdout_predictions_k <-
   map_dfr(unique(batter_all_2019$test_fold),
@@ -145,21 +145,21 @@ holdout_predictions_k <-
             train_data <- batter_all_2019 %>% filter(test_fold != holdout)
             
             # Train models:
-            woba_model_interaction_85 <- gam(woba_value ~ s(launch_angle, launch_speed, k=100), data = train_data, 
+            woba_model_interaction_85 <- gam(woba_value ~ s(launch_angle, launch_speed, k=85), data = train_data, 
                                           method = "REML")
-            woba_model_interaction_195 <- gam(woba_value ~ s(launch_angle, launch_speed, k=150), data = train_data, 
+            woba_model_interaction_300 <- gam(woba_value ~ s(launch_angle, launch_speed, k=300), data = train_data, 
                                           method = "REML")
             
             # Return tibble of holdout results:
-            tibble(preds_65 = predict(woba_model_interaction_100, newdata = test_data),
-                   preds_175 = predict(woba_model_interaction_150, newdata = test_data),
+            tibble(preds_85 = predict(woba_model_interaction_85, newdata = test_data),
+                   preds_300 = predict(woba_model_interaction_300, newdata = test_data),
                    test_actual = test_data$woba_value, test_fold = holdout)
           }
   )
 
 holdout_predictions_k %>%
   pivot_longer(
-    preds_50:preds_150,
+    preds_85:preds_300,
     names_to = "type", values_to = "test_preds"
   ) %>%
   group_by(type, test_fold) %>%
