@@ -140,6 +140,41 @@ class: center, middle, inverse, title-slide
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-11-1.png" width="432" style="display: block; margin: auto;" /&gt;
 ]
 ---
+### Now how can we model these player recommendations? 
+
+.pull-left[
+- We will fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
+**exit velocity** with the target **wOBA**
+  - GAMs have the ability to model complex *non-linear and non-monotonic* relationships between predictors and response variables, such as we see when we smooth the relationship between predictors **exit velocity** and **launch angle** with **wOBA**. 
+]
+.pull-right[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-12-1.png" width="432" /&gt;
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-13-1.png" width="432" /&gt;
+]
+---
+### Our first model missed out on the relationship *between* launch angle and exit velocity in impacting wOBA
+
+.pull-left[
+**Actual relationship**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-14-1.png" width="432" /&gt;
+
+]
+.pull-right[
+**Raster plot from wOBA as a function of s(launch angle) + s(exit velocity)**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-15-1.png" width="432" /&gt;
+]
+---
+### With an interaction in our model, we much better true relationships, such as the increased wOBA from extra base hits and the band of singles
+
+.pull-left[
+**Actual relationship**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;
+]
+.pull-right[
+**Raster plot from wOBA as a function of s(launch angle, exit velocity, k=100)**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
+]
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
