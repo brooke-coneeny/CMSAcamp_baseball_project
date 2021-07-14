@@ -124,7 +124,7 @@ knitr::kable(head(data_example), format = 'html')
 ---
 # Hit outcome by launch angle and exit velocity 
 
-```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+```{r, fig.width = 14, fig.height = 7, echo = FALSE, fig.align='center'}
 library(nationalparkcolors)
 pal2 <- park_palette("Everglades")
 
@@ -245,7 +245,7 @@ faceted_by_alignment
 ---
 ## Pitch type doesn't seem to have an impact either
 
-```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+```{r, fig.width = 14, fig.height = 6, echo = FALSE, fig.align='center'}
 outcome_faceted <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -272,7 +272,9 @@ outcome_faceted <- batter_all_2019 %>%
   scale_color_manual(values = rev(pal2))+
   facet_wrap(~pitch_group, ncol = 1)+
   labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
-  theme_minimal()
+  theme_minimal()+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
 outcome_faceted
 ```
 ---
@@ -280,7 +282,7 @@ outcome_faceted
 ### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
 
 .pull-left[
-```{r, fig.width = 8, fig.height = 5, echo = FALSE, fig.align='center'}
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, fig.align='center'}
 wOBA_by_LA_EV <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   ggplot(aes(x=launch_angle, y = launch_speed, color = woba_value)) +
@@ -292,8 +294,7 @@ wOBA_by_LA_EV <- batter_all_2019 %>%
   theme_minimal()+
   theme(
         panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank()
-  )
+        panel.grid.minor.y = element_blank())
 
 trout_stat_density <- batter_all_2019 %>%
   filter(player_name == "Trout, Mike", description == "hit_into_play") 
@@ -305,7 +306,7 @@ trout_density_2019
 ]
 
 .pull-right[
-```{r, fig.width = 7, fig.height = 5, echo = FALSE, fig.align='center'}
+```{r, fig.width = 6, fig.height = 5.5, echo = FALSE, fig.align='center'}
 fletcher_stat_density <- batter_all_2019 %>%
   filter(player_name == "Fletcher, David", description == "hit_into_play") 
 
@@ -317,4 +318,5 @@ fletcher_density_2019
 ```
 ]
 ---
+
 
