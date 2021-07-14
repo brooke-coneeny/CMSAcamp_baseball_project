@@ -256,20 +256,20 @@ holdout_predictions_k4 <-
             train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
             
             # Train models:
-            model_75 <- gam(woba_value ~ s(launch_angle, launch_speed, k=65), data = train_data, 
+            model_90 <- gam(woba_value ~ s(launch_angle, launch_speed, k=90), data = train_data, 
                             method = "REML")
-            model_155 <- gam(woba_value ~ s(launch_angle, launch_speed, k=135), data = train_data, 
+            model_315 <- gam(woba_value ~ s(launch_angle, launch_speed, k=315), data = train_data, 
                             method = "REML")
             
             # Return tibble of holdout results:
-            tibble(model_75_preds = predict(model_75, newdata = test_data),
-                   model_155_preds = predict(model_155, newdata = test_data),
+            tibble(model_90_preds = predict(model_90, newdata = test_data),
+                   model_315_preds = predict(model_315, newdata = test_data),
                    test_actual = test_data$woba_value, test_fold = holdout)
           })
 
 # Graphs RMSEs for each model tested ks 
 holdout_predictions_k4 %>%
-  pivot_longer(model_75_preds:model_155_preds,
+  pivot_longer(model_90_preds:model_315_preds,
                names_to = "type", values_to = "test_preds") %>%
   group_by(type, test_fold) %>%
   summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
