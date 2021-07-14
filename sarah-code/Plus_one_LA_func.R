@@ -72,5 +72,5 @@ jason_heyward <- batter_all_2021 %>%
   filter(player_name == "Heyward, Jason", description == "hit_into_play") 
 
 
-plus_one_LA(woba_model, mike_trout)
-plus_one_LA(woba_model, jason_heyward)
+plus_one_LA(final_woba_model2, mike_trout)
+plus_one_LA(final_woba_model2, jason_heyward)

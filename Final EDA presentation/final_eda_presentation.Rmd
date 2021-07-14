@@ -445,13 +445,11 @@ test2 %>%
 ---
 ### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
 
-##### Let's test this out for Jason Heyward. 
-
 .pull-left[
+##### Let's test this out for Jason Heyward.
 **Our original thoughts...**
-- As a reminder, based on **Jason Heyward's** density plot we recommended he try to increase his launch angle to around 10-15 degrees. 
-  - This will increase Heyward's number of singles and doubles and decrease groundouts, increasing wOBA. 
-```{r, fig.width = 6, fig.height = 5.5, echo = FALSE, fig.align='center'}
+- As a reminder, we recommended Heyward increase his launch angle to about 10-15 degrees. 
+```{r, fig.width = 5, fig.height = 3, echo = FALSE, fig.align='center'}
 heyward_stat_density <- batter_all_2019 %>%
   filter(player_name == "Heyward, Jason", description == "hit_into_play") 
 
@@ -462,58 +460,65 @@ heyward_density_2019
 ]
 
 .pull-right[
-
-**What does our model tell us?**
+**Our model's output**
 ```{r, echo = FALSE}
-changing_launch_angle <- function(player_data, woba_model2, net_change) {
+changing_launch_angle <- function(player_data, woba_model, net_change) {
   #create tibble of predicted using model
-  tibbletest <- tibble(gam.preds = predict(woba_model2, newdata = player_data))
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
   #find mean woba
-  `predicted woba with changes` <- round(mean(tibbletest$gam.preds, na.rm = TRUE), 3)
+  woba_mean <- round(mean(tibbletest$gam.preds, na.rm = TRUE), 3)
   
   #begin by increasing launch angles by 1 to see what happens to mean 
   add_player_data <- player_data
-  #launch_angle_original <- mean(player_data$launch_angle, na.rm = TRUE)
   add_player_data$launch_angle <- player_data$launch_angle + 1
-  tibbletest <- tibble(gam.preds = predict(woba_model2, newdata = add_player_data))
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = add_player_data))
   add_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
   
   #begin by decreasing launch angles by 1 to see what happens to mean 
   subtract_player_data <- player_data
   subtract_player_data$launch_angle <- player_data$launch_angle - 1
-  tibbletest <- tibble(gam.preds = predict(woba_model2, newdata = subtract_player_data))
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = subtract_player_data))
   subtract_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
   
   #if increasing the angles leads to a greater woba
-  if (add_woba_mean > `predicted woba with changes`) {
+  if (add_woba_mean > woba_mean) {
     #increase the angles again
     net_change <- net_change + 1
-    changing_launch_angle(add_player_data, woba_model2, net_change)
-  } else if (subtract_woba_mean > `predicted woba with changes`) {
+    changing_launch_angle(add_player_data, woba_model, net_change)
+  } else if (subtract_woba_mean > woba_mean) {
     #decrease the angles again 
     net_change <- net_change -1
-    changing_launch_angle(subtract_player_data, woba_model2, net_change)
+    changing_launch_angle(subtract_player_data, woba_model, net_change)
   } else {
     #no change 
-    return (tibble(`predicted woba with changes`, `recommended launch angle` = round(mean(player_data$launch_angle, na.rm = TRUE),0), `degree change` = net_change))
+    return (tibble(`predicted wOBA` = woba_mean, `recommended LA` = round(mean(player_data$launch_angle, na.rm = TRUE), 0), 
+            `degrees change` = net_change))
   }
 }
-
 jason_heyward <- batter_all_2019 %>%
-  filter(player_name == "Heyward, Jason", description == "hit_into_play")
+  filter(player_name == "Heyward, Jason", description == "hit_into_play", 
+         !is.na(launch_angle), !is.na(launch_speed)) 
 
-jhey_recs <- changing_launch_angle(jason_heyward, woba_model2, 0)
-knitr::kable(head(jhey_recs), format = 'html')
+result_heyward <- changing_launch_angle(jason_heyward, woba_model2, 0)
+result_heyward <- result_heyward %>% 
+  add_column(`true wOBA` = round(mean(jason_heyward$woba_value), 3)) %>%
+  add_column(`true LA` = round(mean(jason_heyward$launch_angle), 0))
+result_heyward <- result_heyward %>% 
+  select(`true wOBA`, `predicted wOBA`, `true LA`, `recommended LA`, `degrees change`)
+
+knitr::kable(head(result_heyward), format = 'html')
 ```
 
+- Heyward consistently can reach the exit velocities of a power hitter! **He should increase his launch angle 16 degrees to 27 degrees**. 
+  - With the potential for more home runs and doubles, making this change is expected to raise Heyward's wOBA *for balls in play* **from 0.377 to around 0.442**. 
 ]
+---
 
 ### What does our model recommend for Mike Trout?
-
 .pull-left[
 **Our original thoughts...**
-- Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is 3x MVP after all! 
-```{r, fig.width = 6, fig.height = 5.5, echo = FALSE, fig.align='center'}
+- Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is a 3x MVP after all! 
+```{r, fig.width = 6, fig.height = 4, echo = FALSE, fig.align='center'}
 trout_stat_density <- batter_all_2019 %>%
   filter(player_name == "Trout, Mike", description == "hit_into_play") 
 
@@ -523,13 +528,45 @@ trout_density_2019
 ```
 ]
 .pull-right[
+**Our model's output...**
 ```{r, echo=FALSE}
-miketrout <- batter_all_2019 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play")
+mike_trout <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play",
+         !is.na(launch_angle), !is.na(launch_speed)) 
 
-trout_recs <- changing_launch_angle(miketrout, woba_model2, 0)
-knitr::kable(head(trout_recs), format = 'html')
+result_trout <- changing_launch_angle(mike_trout, woba_model2, 0)
+result_trout <- result_trout %>% 
+  add_column(`true wOBA` = round(mean(mike_trout$woba_value), 3)) %>%
+  add_column(`true LA` = round(mean(mike_trout$launch_angle), 0))
+result_trout <- result_trout %>% 
+  select(`true wOBA`, `predicted wOBA`, `true LA`, `recommended LA`, `degrees change`)
+
+knitr::kable(head(result_trout), format = 'html')
 ```
 
+- Our model agrees that Mike Trout should not change his launch angle. 
+  - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
 ]
+---
 
+### Next Steps: for the short term we intend to...
+
+- Pick a final model - we recently created a **random forest model** and must pick between it and our current **GAM model**. 
+
+- Find a way to adjust a player's launch angle but still keep their exit velocity distribution intact. 
+
+- Decide how much change in wOBA is worth modifying a player's swing!
+
+![](workinprogess.png){width=20%}
+---
+
+### Next Steps: for the long term we are interested in...
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+  
+- We only looked at in play data:
+  - Do certain launch angles or changing launch angles lead to more strikeouts? 
+
+![Source: educatedcoaches.com](baseball_quote.png){width=20%}

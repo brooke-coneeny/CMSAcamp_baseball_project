@@ -37,8 +37,6 @@ class: center, middle, inverse, title-slide
 .pull-right[
 
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-3-1.png" width="504" /&gt;
-
-
 ]
 
 ---
@@ -161,20 +159,113 @@ class: center, middle, inverse, title-slide
 
 ]
 .pull-right[
-**Raster plot from wOBA as a function of s(launch angle) + s(exit velocity)**
+**Our model's output**
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-15-1.png" width="432" /&gt;
 ]
 ---
-### With an interaction in our model, we much better true relationships, such as the increased wOBA from extra base hits and the band of singles
+### With an interaction in our model, we much better see the true relationships, such as the increased wOBA from extra base hits and the band of singles
 
 .pull-left[
 **Actual relationship**
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;
 ]
 .pull-right[
-**Raster plot from wOBA as a function of s(launch angle, exit velocity, k=100)**
+**Our model's output** 
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
 ]
+---
+### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
+
+.pull-left[
+##### Let's test this out for Jason Heyward.
+**Our original thoughts...**
+- As a reminder, we recommended Heyward increase his launch angle to about 10-15 degrees. 
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-18-1.png" width="360" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+**Our model's output**
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; true wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; predicted wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; true LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; recommended LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; degrees change &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0.377 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.442 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 26 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+- Heyward consistently can reach the exit velocities of a power hitter! **He should increase his launch angle 16 degrees to 27 degrees**. 
+  - With the potential for more home runs and doubles, making this change is expected to raise Heyward's wOBA *for balls in play* **from 0.377 to around 0.442**. 
+]
+---
+
+### What does our model recommend for Mike Trout?
+.pull-left[
+**Our original thoughts...**
+- Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is a 3x MVP after all! 
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" style="display: block; margin: auto;" /&gt;
+]
+.pull-right[
+**Our model's output...**
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; true wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; predicted wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; true LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; recommended LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; degrees change &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0.537 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.56 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 22 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 22 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+- Our model agrees that Mike Trout should not change his launch angle. 
+  - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
+]
+---
+
+### Next Steps: for the short term we intend to...
+
+- Pick a final model - we recently created a **random forest model** and must pick between it and our current **GAM model**. 
+
+- Find a way to adjust a player's launch angle but still keep their exit velocity distribution intact. 
+
+- Decide how much change in wOBA is worth modifying a player's swing!
+
+![](workinprogess.png){width=40%}
+---
+
+### Next Steps: for the long term we are interested in...
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+  
+- We only looked at in play data:
+  - Do certain launch angles or changing launch angles lead to more strikeouts? 
+
+![Source: educatedcoaches.com](baseball_quote.png){width=40%}
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
