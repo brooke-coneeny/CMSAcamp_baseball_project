@@ -23,7 +23,7 @@ batter_all_2019 %>%
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                  data = batter_all_2019, method = "REML") 
 
-woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 300), 
+woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 200), 
                   data = batter_all_2019, method = "REML")
 
 woba_model_interaction_intercepts <- gam(woba_value ~ s(launch_speed) + 
@@ -53,7 +53,6 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
   tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
   #find mean woba
   woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
-  true_woba_mean <- mean(player_data$woba_value)
   
   #begin by increasing launch angles by 1 to see what happens to mean 
   add_player_data <- player_data
@@ -78,19 +77,32 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
     changing_launch_angle(subtract_player_data, woba_model, net_change)
   } else {
     #no change 
-    return (tibble(estimated_wOBA = woba_mean, true_woba = true_woba_mean, avg_launch_angle = mean(player_data$launch_angle, na.rm = TRUE), 
-            chng_in_angle = net_change))
+    return (tibble(predicted_wOBA = woba_mean, recommended_LA = mean(player_data$launch_angle, na.rm = TRUE), 
+            chng_LA = net_change))
   }
 }
 
 #test on real players
 mike_trout <- batter_all_2019 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play") 
-jason_heyward <- batter_all_2019 %>%
-  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+  filter(player_name == "Trout, Mike", description == "hit_into_play",
+         !is.na(launch_angle), !is.na(launch_speed)) 
 
-changing_launch_angle(mike_trout, woba_model_interaction, 0)
-changing_launch_angle(jason_heyward, woba_model_interaction, 0)
+result_trout <- changing_launch_angle(mike_trout, woba_model_interaction, 0) 
+result_trout <- result_trout %>% 
+  add_column(true_wOBA = mean(mike_trout$woba_value)) %>%
+  add_column(true_LA = mean(mike_trout$launch_angle))
+result_trout <- result_trout %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
+
+jason_heyward <- batter_all_2019 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play", 
+         !is.na(launch_angle), !is.na(launch_speed)) 
+
+result_heyward <- changing_launch_angle(jason_heyward, woba_model_interaction, 0)
+result_heyward <- result_heyward %>% 
+  add_column(true_wOBA = mean(jason_heyward$woba_value)) %>%
+  add_column(true_LA = mean(jason_heyward$launch_angle))
+result_heyward <- result_heyward %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
+
 
 #train and test model with cross validation and rmse 
 set.seed(2001)
@@ -170,3 +182,8 @@ holdout_predictions_k %>%
   stat_summary(fun = mean, geom = "point", color = "red") +
   stat_summary(fun.data = mean_se, geom = "errorbar", color = "red")
 
+#now that we have determined that the minimum k is very large, we want to find a k that has a consistent p value above 0.05
+
+woba_model_interaction_200 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019, 
+                                 method = "REML")
+gam.check(woba_model_interaction_200, k.sample = 50,000, k.rep = 250)
