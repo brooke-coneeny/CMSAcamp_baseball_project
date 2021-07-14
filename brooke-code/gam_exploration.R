@@ -23,7 +23,7 @@ batter_all_2019 %>%
 woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                  data = batter_all_2019, method = "REML") 
 
-woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 50), 
+woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 300), 
                   data = batter_all_2019, method = "REML")
 
 woba_model_interaction_intercepts <- gam(woba_value ~ s(launch_speed) + 
@@ -53,6 +53,7 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
   tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
   #find mean woba
   woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
+  true_woba_mean <- mean(player_data$woba_value)
   
   #begin by increasing launch angles by 1 to see what happens to mean 
   add_player_data <- player_data
@@ -77,10 +78,19 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
     changing_launch_angle(subtract_player_data, woba_model, net_change)
   } else {
     #no change 
-    return (tibble(wOBA = woba_mean, avg_launch_angle = mean(player_data$launch_angle, na.rm = TRUE), 
+    return (tibble(estimated_wOBA = woba_mean, true_woba = true_woba_mean, avg_launch_angle = mean(player_data$launch_angle, na.rm = TRUE), 
             chng_in_angle = net_change))
   }
 }
+
+#test on real players
+mike_trout <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+jason_heyward <- batter_all_2019 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+
+changing_launch_angle(mike_trout, woba_model_interaction, 0)
+changing_launch_angle(jason_heyward, woba_model_interaction, 0)
 
 #train and test model with cross validation and rmse 
 set.seed(2001)
@@ -108,7 +118,6 @@ holdout_predictions <-
           }
   )
 
-
 holdout_predictions %>%
   pivot_longer(
     woba_model_interaction_preds:woba_model_preds,
@@ -122,8 +131,42 @@ holdout_predictions %>%
     stat_summary(fun = mean, geom = "point", color = "red") +
     stat_summary(fun.data = mean_se, geom = "errorbar", color = "red")
 
+#testing different values of k 
+set.seed(2001)
+batter_all_2019 <- batter_all_2019 %>% 
+  filter(description == "hit_into_play") %>%
+  mutate(test_fold = sample(rep(1:3, length.out = n())))
 
+holdout_predictions_k <-
+  map_dfr(unique(batter_all_2019$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019 %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019 %>% filter(test_fold != holdout)
+            
+            # Train models:
+            woba_model_interaction_85 <- gam(woba_value ~ s(launch_angle, launch_speed, k=85), data = train_data, 
+                                          method = "REML")
+            woba_model_interaction_300 <- gam(woba_value ~ s(launch_angle, launch_speed, k=300), data = train_data, 
+                                          method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(preds_85 = predict(woba_model_interaction_85, newdata = test_data),
+                   preds_300 = predict(woba_model_interaction_300, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          }
+  )
 
-
-
+holdout_predictions_k %>%
+  pivot_longer(
+    preds_85:preds_300,
+    names_to = "type", values_to = "test_preds"
+  ) %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x = type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point", color = "red") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", color = "red")
 

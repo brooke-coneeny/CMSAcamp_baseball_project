@@ -149,7 +149,6 @@ faceted_by_alignment <- batter_all_2019 %>%
   labs(x = "launch angle", y="", title = "Hit outcome faceted by fielding alignment", fill = "")+
   theme_minimal()
 
-
 #graph showing hit outcome by exit velocity and launch angle ------------------
 outcome_by_LA_EV <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
