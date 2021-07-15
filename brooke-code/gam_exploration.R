@@ -103,6 +103,15 @@ result_heyward <- result_heyward %>%
   add_column(true_LA = mean(jason_heyward$launch_angle))
 result_heyward <- result_heyward %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
 
+tony_kemp <- batter_all_2019 %>%
+  filter(player_name == "Kemp, Tony", description == "hit_into_play",
+         !is.na(launch_angle), !is.na(launch_speed)) 
+
+result_kemp <- changing_launch_angle(tony_kemp, woba_model_interaction, 0) 
+result_kemp <- result_kemp %>% 
+  add_column(true_wOBA = mean(tony_kemp$woba_value)) %>%
+  add_column(true_LA = mean(tony_kemp$launch_angle))
+result_kemp <- result_kemp %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
 
 #train and test model with cross validation and rmse 
 set.seed(2001)
