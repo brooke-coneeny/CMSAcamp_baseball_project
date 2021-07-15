@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>EDA: Maximzing WOBA with Launch Angle and Exit Velocity</title>
+    <title>Maximzing WOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-07-14" />
+    <meta name="date" content="2021-07-15" />
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
-# EDA: Maximzing WOBA with Launch Angle and Exit Velocity
+# Maximzing WOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-07-14
+### 2021-07-15
 
 ---
 
@@ -135,7 +135,7 @@ class: center, middle, inverse, title-slide
 ]
 
 .pull-right[
-&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-11-1.png" width="432" style="display: block; margin: auto;" /&gt;
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-11-1.png" width="504" style="display: block; margin: auto;" /&gt;
 ]
 ---
 ### Now how can we model these player recommendations? 
@@ -174,13 +174,26 @@ class: center, middle, inverse, title-slide
 &lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
 ]
 ---
+### We further evaluated our model by taking the following steps 
+
+1) Compared our interaction model to the original additive model and a model with tensor 
+smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
+
+2) Tuned our **k** to **200** with a similar process and got a **p-value of 0.1** with `gam.check()`.
+
+3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
+
+4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-18-1.png" width="432" /&gt;
+---
 ### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
 
 .pull-left[
 ##### Let's test this out for Jason Heyward.
 **Our original thoughts...**
 - As a reminder, we recommended Heyward increase his launch angle to about 10-15 degrees. 
-&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-18-1.png" width="360" style="display: block; margin: auto;" /&gt;
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-19-1.png" width="360" style="display: block; margin: auto;" /&gt;
 ]
 
 .pull-right[
@@ -215,7 +228,7 @@ class: center, middle, inverse, title-slide
 .pull-left[
 **Our original thoughts...**
 - Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is a 3x MVP after all! 
-&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" style="display: block; margin: auto;" /&gt;
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-21-1.png" width="432" style="display: block; margin: auto;" /&gt;
 ]
 .pull-right[
 **Our model's output...**
@@ -253,7 +266,7 @@ class: center, middle, inverse, title-slide
 
 - Decide how much change in wOBA is worth modifying a player's swing!
 
-![](workinprogess.png){width=40%}
+&lt;img src="https://cdn11.bigcommerce.com/s-10c6f/images/stencil/1280x1280/products/15607/25366/BAN171-MD__51396.1559929230.jpg?c=2" width="40%" style="display: block; margin: auto;" /&gt;
 ---
 
 ### Next Steps: for the long term we are interested in...
@@ -265,7 +278,7 @@ class: center, middle, inverse, title-slide
 - We only looked at in play data:
   - Do certain launch angles or changing launch angles lead to more strikeouts? 
 
-![Source: educatedcoaches.com](baseball_quote.png){width=40%}
+&lt;img src="http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg" width="40%" style="display: block; margin: auto;" /&gt;
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

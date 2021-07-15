@@ -1,5 +1,5 @@
 ---
-title: "EDA: Maximzing WOBA with Launch Angle and Exit Velocity"
+title: "Maximzing WOBA with Launch Angle and Exit Velocity"
 author: "Sarah Sult, Brooke Coneeny, Erin Franke"
 date: '`r Sys.Date()`'
 output:
@@ -305,7 +305,7 @@ trout_density_2019
 ]
 
 .pull-right[
-```{r, fig.width = 6, fig.height = 5.5, echo = FALSE, fig.align='center'}
+```{r, fig.width = 7, fig.height = 5.5, echo = FALSE, fig.align='center'}
 heyward_stat_density <- batter_all_2019 %>%
   filter(player_name == "Heyward, Jason", description == "hit_into_play") 
 
@@ -443,6 +443,25 @@ test2 %>%
 ```
 ]
 ---
+### We further evaluated our model by taking the following steps 
+
+1) Compared our interaction model to the original additive model and a model with tensor 
+smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
+
+2) Tuned our **k** to **200** with a similar process and got a **p-value of 0.1** with `gam.check()`.
+
+3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
+
+4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
+
+```{r, echo = FALSE, fig.width=6, fig.height=4}
+vis.gam(x=woba_model2,  
+        view = c("launch_angle", "launch_speed"), #variables
+        plot.type = "contour", #kind of plot
+        too.far = 0.05, #indicates what type of predictions should not be plotted because they are too far from the actual data, scaled from 0 to 1. The smaller the number, more area is not supported by data 
+        nlevels = 20)
+```
+---
 ### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
 
 .pull-left[
@@ -557,7 +576,9 @@ knitr::kable(head(result_trout), format = 'html')
 
 - Decide how much change in wOBA is worth modifying a player's swing!
 
-![](workinprogess.png){width=20%}
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://cdn11.bigcommerce.com/s-10c6f/images/stencil/1280x1280/products/15607/25366/BAN171-MD__51396.1559929230.jpg?c=2")
+```
 ---
 
 ### Next Steps: for the long term we are interested in...
@@ -569,4 +590,7 @@ knitr::kable(head(result_trout), format = 'html')
 - We only looked at in play data:
   - Do certain launch angles or changing launch angles lead to more strikeouts? 
 
-![Source: educatedcoaches.com](baseball_quote.png){width=20%}
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg")
+```
+
