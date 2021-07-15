@@ -23,7 +23,7 @@ final_woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data
 # Function to manually adjust launch angles -------------------------------
 
 #model can be swapped out for a more correct model
-plus_one_LA <- function (final_woba_model2, data){
+plus_one_LA <- function (model, data){
   #calculate starting preds
   preds1 <- tibble(gam.preds = predict(model, newdata = data))  
   #mean should give pred xwOBA for season
@@ -74,3 +74,5 @@ jason_heyward <- batter_all_2021 %>%
 
 plus_one_LA(final_woba_model2, mike_trout)
 plus_one_LA(final_woba_model2, jason_heyward)
+
+
