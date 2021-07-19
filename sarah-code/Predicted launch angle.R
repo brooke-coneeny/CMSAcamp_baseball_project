@@ -19,19 +19,12 @@ batter_all_1921hp <- batter_all_1921 %>%
 
 # Create model for attack angle and height predicting LA ------------------
 
-# for(atbat in 1:length(batter_all_2019hp$pitch_type)){
-#   batter_all_2019hp[atbat,]$attack_angle = median((batter_all_2019hp %>% 
-#                                                     filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
-#                                                     filter(player_name == batter_all_2019hp[atbat,]$player_name) %>% 
-#                                                     filter(launch_speed >= quantile(launch_speed, .9)))$launch_angle)
-# }
-
 # Need to calculate the attack angle for every at bat (needs to be the same for each individual player)
-batter_all_2019hp %>% group_by(player_name) %>% 
-  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
-  filter(launch_speed >= quantile(launch_speed, .9)) %>%
-  mutate(attack_angle = median(launch_angle)) %>%
-  ungroup()
+batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
+  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
+  summarize(attack_angle = median(launch_angle)) %>%
+  right_join(batter_all_2019hp, by = c("player_name"))
 
 predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
 
