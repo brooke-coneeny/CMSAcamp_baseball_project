@@ -59,8 +59,8 @@ probs_Gallo <- var_range %>%
 sum(probs_Gallo$d)
          
 # Therefore, we added two more columns to create our mock data set
-# d_div_sum now represents ____________?
-# num_hits is now _____________________?
+# d_div_sum now represents proporiton of hits at that LA and EV 
+# num_hits is now number of hits we want at that given LA and EV
 probs_Gallo <- var_range %>% 
   mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
                      launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *
@@ -71,16 +71,18 @@ probs_Gallo <- var_range %>%
 sum(probs_Gallo$d_div_sum)
 
 
-# Need to replicate the combinations the number of times of num_hits aka if one combo has 
-# num_hits=78... there better be 78 of that LA/EV combo in the mock data set...
-mock_Gallo <- probs_Gallo %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, num_hits) %>% uncount(num_hits)
+# Need to replicate the combinations the number of times of num_hits aka if one combo has num_hits
+mock_Gallo <- probs_Gallo %>% 
+  filter (num_hits>=1) %>% 
+  select(launch_angle, launch_speed, num_hits) %>% 
+  uncount(num_hits) #repeats the LA and EV observation num hits times 
 
 
 preds_Gallo <- tibble(gam.preds = predict(woba_model_interaction, newdata = mock_Gallo))  
 wOBA_Gallo <- mean(preds_Gallo$gam.preds, na.rm = TRUE)  
 mean((batter_all_2019hp %>% filter(player_name == player))$woba_value)
 
-# Gets the probabilities Trout hits any combination of LA/EV and turns it into a mock data set
+# Need to replicate the combinations the number of times of num_hits aka if one combo has num_hits
 probs_Trout <- var_range %>% 
   mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
                      launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *
@@ -88,10 +90,10 @@ probs_Trout <- var_range %>%
          d_div_sum = d/sum(d),
          num_hits = round(d_div_sum*100000, 0))
 
-#somehow need to replicate the combinations the number of times of num_hits aka if one combo has 
-#num_hits=78... there better be 78 of that LA/EV combo in the mock data set...
-mock_Trout <- probs_Trout %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, num_hits) %>% uncount(num_hits)
-
+mock_Trout <- probs_Trout %>% 
+  filter (num_hits>=1) %>% 
+  select(launch_angle, launch_speed, num_hits) %>% 
+  uncount(num_hits)
 
 preds_Trout <- tibble(gam.preds = predict(woba_model_interaction, newdata = mock_Trout))  
 wOBA_Trout <- mean(preds_Trout$gam.preds, na.rm = TRUE)  

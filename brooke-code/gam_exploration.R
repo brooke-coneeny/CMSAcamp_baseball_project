@@ -113,6 +113,16 @@ result_kemp <- result_kemp %>%
   add_column(true_LA = mean(tony_kemp$launch_angle))
 result_kemp <- result_kemp %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
 
+joey_gallo <- batter_all_2019 %>%
+  filter(player_name == "Gallo, Joey", description == "hit_into_play", 
+         !is.na(launch_angle), !is.na(launch_speed)) 
+
+result_gallo <- changing_launch_angle(joey_gallo, woba_model_interaction, 0)
+result_gallo <- result_gallo %>% 
+  add_column(true_wOBA = mean(joey_gallo$woba_value)) %>%
+  add_column(true_LA = mean(joey_gallo$launch_angle))
+result_gallo <- result_gallo %>% relocate(true_wOBA) %>% relocate(true_LA, .after = predicted_wOBA)
+
 #train and test model with cross validation and rmse 
 set.seed(2001)
 batter_all_2019 <- batter_all_2019 %>% 
