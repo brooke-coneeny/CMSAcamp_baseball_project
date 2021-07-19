@@ -30,11 +30,15 @@ june_week4 <- scrape_statcast_savant_batter_all(start_date = "2021-06-23",
                                                  end_date = "2021-06-30")
 july_week1 <- scrape_statcast_savant_batter_all(start_date = "2021-07-01",
                                                  end_date = "2021-07-06")
+july_week2 <- scrape_statcast_savant_batter_all(start_date = "2021-07-07",
+                                                end_date = "2021-07-14")
+july_week3 <- scrape_statcast_savant_batter_all(start_date = "2021-07-15",
+                                                end_date = "2021-07-18")
 
 
 batter_all_2021 <- bind_rows(april_week1, april_week2, april_week3, april_week4, 
                      may_week2, may_week3, may_week4, june_week1, june_week2,
-                     june_week3, june_week4, july_week1)
+                     june_week3, june_week4, july_week1, july_week2, july_week3)
 
 # Write 2021 data to rds --------------------------------------------------
 
