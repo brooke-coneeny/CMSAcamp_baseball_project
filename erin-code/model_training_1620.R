@@ -25,8 +25,9 @@ train_i <- createDataPartition(y = batter_all_1620hp$woba_value, p = 0.5, list =
 train_mlb_1620 <- batter_all_1620hp[train_i,]
 
 #load model
-woba_model2_1620 <- gam(woba_value ~ s(launch_angle, launch_speed), data = train_mlb_1620, method = "REML")
-
+woba_model2_1620 <-  gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = train_mlb_1620, 
+                         method = "REML")
+gam.check(woba_model2_1620)
 
 #load function -------------------------------------------------------------
 changing_launch_angle <- function(player_data, woba_model, net_change) {
