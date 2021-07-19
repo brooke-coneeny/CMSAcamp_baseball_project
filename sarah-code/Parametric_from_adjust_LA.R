@@ -42,6 +42,7 @@ la_dist <- function(ev, la, attack, n = 100000) {
   w <- sn::psn(ev, launch_speed_skew_norm@param$dp[1],launch_speed_skew_norm@param$dp[2],
                launch_speed_skew_norm@param$dp[3])^2
   w = (exp(w)/(100 + exp(w)))^2.2
+  #(la+75)/150 puts all launch angles between 0 and 1
   dbeta((la + 75)/150, 1 + w * n * (attack + 75)/150, 1 + w * n - w * (n * (attack + 75)/150))
 }
 
@@ -65,13 +66,19 @@ probs_Gallo <- var_range %>%
          d_div_sum = d/sum(d),
          num_hits = round(d_div_sum*100000, 0))
 
-#somehow need to replicate the combinations the number of times of num_hits aka if one combo has 
-#num_hits=78... there better be 78 of that LA/EV combo in the mock data set...
 mock_Gallo <- probs_Gallo %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, num_hits) %>% uncount(num_hits)
+# Sample based on those probabilities rather than that multiplication
+set.seed(2021)
+Gallo_sample <- sample(1:nrow(probs_Gallo), 300, replace = TRUE, prob = probs_Gallo$d_div_sum)
+mock_Gallo1 <- probs_Gallo[Gallo_sample,] %>% select(launch_angle, launch_speed)
 
-
+#first way
 preds_Gallo <- tibble(gam.preds = predict(final_woba_model2, newdata = mock_Gallo))  
 wOBA_Gallo <- mean(preds_Gallo$gam.preds, na.rm = TRUE)  
+#sampling
+preds_Gallo1 <- tibble(gam.preds = predict(final_woba_model2, newdata = mock_Gallo1))  
+wOBA_Gallo1 <- mean(preds_Gallo1$gam.preds, na.rm = TRUE)
+#actual 2019 value
 mean((batter_all_2019hp %>% filter(player_name == player))$woba_value)
 
 # Gets the probabilities Trout hits any combination of LA/EV and turns it into a mock data set
@@ -195,3 +202,4 @@ adjust_attack <- function(model, all_data, attack){
 gallo_data <- batter_all_2019hp %>% filter (player_name == "Gallo, Joey")
 adjust_attack(final_woba_model2, gallo_data, attack_angle)
 
+hist(gallo_data$launch_angle)
