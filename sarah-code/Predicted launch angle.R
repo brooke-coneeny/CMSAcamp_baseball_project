@@ -42,12 +42,10 @@ EV_vector1 <- vector()    #for no change in attack angle
 EV_vector2 <- vector()    #for plus one attack angle
 EV_vector3 <- vector()    #for minus one attack angle
 
-# Pass in the woba model, the LA model, the player's data for the year, repeat the player's data (this 
-#will change in the recursive call but we need to keep the actual data for calculating the launch speed),
-#the players original woba for output purposes, the original attack angle for output purposes, and the 
-#attack angle which will be modified in the recursive call
-predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_player_data, orig_woba, 
-                                       orig_attack, attack)
+# Pass in the woba model, the LA model, the player's data for the year (the attack angle will be changed 
+#in the recursive calls), the players original woba for output purposes, the original attack angle for 
+#output purposes, and the attack angle which will be modified in the recursive call
+predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_woba, orig_attack, attack)
   {
   # Model the predicted angles given the original attack angle
   pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
@@ -115,14 +113,12 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
   # If original < +1
   if(xwOBA1 < xwOBA2){
      # Recursively call with +1 attack angle data
-    predicted_LA_adjust_attack(woba_model, LA_model, player_data, modeled_data_plus_one, orig_woba, 
-                               orig_attack, attack+1)
+    predicted_LA_adjust_attack(woba_model, LA_model, plus_one_attack, orig_woba, orig_attack, attack+1)
   }
   # Else if original < -1
   else if (xwOBA1 < xwOBA3){
     # Recursively call with -1 attack angle data
-    predicted_LA_adjust_attack(woba_model, LA_model, player_data, modeled_data_minus_one, orig_woba, 
-                               orig_attack, attack-1)
+    predicted_LA_adjust_attack(woba_model, LA_model, minus_one_attack, orig_woba, orig_attack, attack-1)
   }
   # Else
   else{
@@ -137,13 +133,13 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
 jhey <- batter_all_2019hp %>%
   filter(player_name == "Heyward, Jason")
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
-predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jhey, jhey, jhey_woba, jhey$attack_angle, 
+predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jhey, jhey_woba, jhey$attack_angle, 
                            jhey$attack_angle)
 
 # Using Mike Trout to test b/c it should be short
 mtrout <- batter_all_2019hp %>%
   filter(player_name == "Trout, Mike")
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
-predicted_LA_adjust_attack(final_woba_model2, predicted_LA, mtrout, mtrout, mtrout_woba, 
-                           mtrout$attack_angle, mtrout$attack_angle)
+predicted_LA_adjust_attack(final_woba_model2, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
+                           mtrout$attack_angle)
 
