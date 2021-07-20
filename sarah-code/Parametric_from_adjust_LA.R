@@ -98,6 +98,11 @@ preds_Trout <- tibble(gam.preds = predict(final_woba_model2, newdata = mock_Trou
 wOBA_Trout <- mean(preds_Trout$gam.preds, na.rm = TRUE)  
 mean((batter_all_2019hp %>% filter(player_name == player))$woba_value)
 
+# Final Model -------------------------------------------------------------
+
+final_woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019hp, 
+                         method = "REML")
+
 
 # Adjusting attack angle to find best xwOBA -------------------------------
 
