@@ -99,4 +99,107 @@ preds_Trout <- tibble(gam.preds = predict(woba_model_interaction, newdata = mock
 wOBA_Trout <- mean(preds_Trout$gam.preds, na.rm = TRUE)  
 mean((batter_all_2019 %>% filter(player_name == player))$woba_value)
 
+# Adjusting attack angle to find best xwOBA -------------------------------
+
+la_dist <- function(ev, la, attack, n = 100000) {
+  w <- sn::psn(ev, 
+               launch_speed_skew_norm@param$dp[1],launch_speed_skew_norm@param$dp[2],  
+               launch_speed_skew_norm@param$dp[3])^2
+  w = (exp(w)/(100 + exp(w)))^2.2
+  dbeta((la + 75)/150, 1 + w * n * (attack + 75)/150, 1 + w * n - w * (n * (attack + 75)/150))
+}
+
+player = "Gallo, Joey"
+
+attack_angle <- median((batter_all_2019hp %>% 
+                          filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
+                          filter(player_name == player) %>% 
+                          filter(launch_speed >= quantile(launch_speed, .9)))$launch_angle)
+
+adjust_attack <- function(model, all_data, attack){
+  original_wOBA <- mean(all_data$woba_value)
+  
+  var_range <- expand.grid(launch_speed = 30:125,
+                           launch_angle = -75:75)
+  
+  launch_speed_skew_norm <- sn::selm(launch_speed ~ 1, data = all_data %>% 
+                                       filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7), 
+                                     method = "MPLE")
+  
+  # THE STARTING ATTACK ANGLE
+  #Gets the probabilities of combinations of LA/EV 
+  probs1 <- var_range %>% 
+    mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
+                       launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *  
+             la_dist(launch_speed, launch_angle, attack),
+           d_div_sum = d/sum(d),
+           num_hits = round(d_div_sum*100000, 0))
+  
+  #Create mock dataset 
+  mock1 <- probs1 %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, 
+                                                      num_hits) %>% uncount(num_hits)
+  
+  #Predicted woba values 
+  preds1 <- tibble(gam.preds = predict(model, newdata = mock1))  
+  
+  #Predicted average woba value 
+  xwOBA1 = mean(preds1$gam.preds)
+  
+  # PLUS ONE ATTACK ANGLE
+  #Gets the probabilities of combinations of LA/EV 
+  probs2 <- var_range %>% 
+    mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
+                       launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *  
+             la_dist(launch_speed, launch_angle, attack+1),
+           d_div_sum = d/sum(d),
+           num_hits = round(d_div_sum*100000, 0))
+  
+  #Create mock dataset 
+  mock2 <- probs2 %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, 
+                                                      num_hits) %>% uncount(num_hits)
+  
+  #Predicted woba values 
+  preds2 <- tibble(gam.preds = predict(model, newdata = mock2))  
+  
+  #Predicted average woba value 
+  xwOBA2 = mean(preds2$gam.preds)
+  
+  
+  # PLUS TWO ATTACK ANGLE
+  #Gets the probabilities of combinations of LA/EV 
+  probs3 <- var_range %>% 
+    mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
+                       launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *  
+             la_dist(launch_speed, launch_angle, attack-1),
+           d_div_sum = d/sum(d),
+           num_hits = round(d_div_sum*100000, 0))
+  
+  #Create mock dataset 
+  mock3 <- probs3 %>% filter (num_hits>=1) %>% select(launch_angle, launch_speed, 
+                                                      num_hits) %>% uncount(num_hits)
+  
+  #Predicted woba values 
+  preds3 <- tibble(gam.preds = predict(model, newdata = mock3))  
+  
+  #Predicted average woba value 
+  xwOBA3 = mean(preds3$gam.preds)
+  
+  #+1 attack better
+  if(xwOBA1 < xwOBA2){
+    adjust_attack(model, mock2, attack+1)
+  }
+  #-1 attack better
+  else if(xwOBA1 < xwOBA3){
+    adjust_attack(model, mock3, attack-1)
+  }
+  #we found the best
+  else{
+    return(tibble(best_attack = attack, xwOBA = xwOBA1))
+  }
+  
+}
+
+gallo_data <- batter_all_2019hp %>% filter (player_name == "Gallo, Joey")
+adjust_attack(final_woba_model2, gallo_data, attack_angle)
+
 
