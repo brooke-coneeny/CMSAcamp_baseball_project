@@ -50,7 +50,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
                                        orig_attack, attack)
   {
   # Model the predicted angles given the original attack angle
-  pred_angles <- tibble(lm.preds = predict(LA_model, newdata = mod_player_data))
+  pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
 
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   for(i in 1:length(pred_angles$lm.preds)){
@@ -66,11 +66,10 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
   
   modeled_data <- tibble(launch_angle = pred_angles$lm.preds, launch_speed = EV_vector1)
   preds1 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
-  xwOBA1 <- mean(preds1$gam.preds)
-  print(xwOBA1)
-  
+  xwOBA1 <- mean(preds1$gam.preds, na.rm = TRUE)
+
   # Repeat with a +1 attack angle
-  plus_one_attack <- mod_player_data
+  plus_one_attack <- player_data
   plus_one_attack$attack_angle <- plus_one_attack$attack_angle + 1
   
   pred_angles2 <- tibble(lm.preds = predict(LA_model, newdata = plus_one_attack))
@@ -89,11 +88,10 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
   
   modeled_data_plus_one <- tibble(launch_angle = pred_angles2$lm.preds, launch_speed = EV_vector2)
   preds2 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_plus_one))  
-  xwOBA2 <- mean(preds2$gam.preds)
-  print(xwOBA2)
-  
+  xwOBA2 <- mean(preds2$gam.preds, na.rm = TRUE)
+
   # Repeat with a -1 attack angle
-  minus_one_attack <- mod_player_data
+  minus_one_attack <- player_data
   minus_one_attack$attack_angle <- minus_one_attack$attack_angle - 1
   
   pred_angles3 <- tibble(lm.preds = predict(LA_model, newdata = minus_one_attack))
@@ -112,7 +110,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
   
   modeled_data_minus_one <- tibble(launch_angle = pred_angles3$lm.preds, launch_speed = EV_vector3)
   preds3 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_minus_one))  
-  xwOBA3 <- mean(preds3$gam.preds)
+  xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
   
   # If original < +1
   if(xwOBA1 < xwOBA2){
@@ -130,7 +128,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, mod_pl
   else{
     # Return the orig_woba, xwOBA, orig_attack, and attack angles
     return (tibble(original_woba = orig_woba, woba = xwOBA1, original_attack = orig_attack, 
-                   reccomended_attack = attack))
+                   reccomended_attack = attack)[1,])
   }
   
 }
