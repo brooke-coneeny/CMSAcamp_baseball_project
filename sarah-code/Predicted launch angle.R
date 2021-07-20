@@ -26,7 +26,24 @@ batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>%
   summarize(attack_angle = median(launch_angle)) %>%
   right_join(batter_all_2019hp, by = c("player_name"))
 
-predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
+# Graph relationships between variables and LA
+batter_all_2019hp %>%
+  ggplot(aes(x=attack_angle, y=launch_angle))+
+  geom_smooth()
+
+batter_all_2019hp %>%
+  ggplot(aes(x=plate_z, y=launch_angle))+
+  geom_smooth()
+hist(batter_all_2019hp$plate_z)
+
+predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
+summary(predicted_LA)
+
+predicted_LA2 <- gam(launch_angle ~ s(attack_angle) + s(plate_z), data = batter_all_2019hp)
+gam.check(predicted_LA2)
+
+predicted_LA3 <- gam(launch_angle ~ s(attack_angle, plate_z, k=75), data = batter_all_2019hp)
+gam.check(predicted_LA3) #worse but might need a higher k?
 
 # Final Model -------------------------------------------------------------
 
@@ -100,7 +117,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     hits_at_angle <- player_data %>% 
       filter(launch_angle <= pred_angles3$lm.preds[i]+3 & launch_angle >= pred_angles3$lm.preds[i]-3)
     # Sample those hits, 10 for each predicted angle and take mean launch speed of those
-    EV_sample_index <- sample(1:nrow(hits_at_angle), 10, replace = TRUE)
+    EV_sample_index <- sample(1:nrow(hits_at_angle), 50, replace = TRUE)
     pred_EV <- player_data[EV_sample_index,] %>% summarize(the_EV = mean(launch_speed))
     # Add that launch speed to vector as the predicted launch speed 
     EV_vector3 <- c(EV_vector3, pred_EV$the_EV[1])
@@ -123,7 +140,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   # Else
   else{
     # Return the orig_woba, xwOBA, orig_attack, and attack angles
-    return (tibble(original_woba = orig_woba, woba = xwOBA1, original_attack = orig_attack, 
+    return (tibble(original_woba = orig_woba, predicted_woba = xwOBA1, original_attack = orig_attack, 
                    reccomended_attack = attack)[1,])
   }
   
@@ -142,4 +159,32 @@ mtrout <- batter_all_2019hp %>%
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
                            mtrout$attack_angle)
+
+# Using Joey Gallo to test 
+jgallo <- batter_all_2019hp %>%
+  filter(player_name == "Gallo, Joey")
+jgallo_woba <- mean(jgallo$woba_value, na.rm = TRUE)
+predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jgallo, jgallo_woba, jgallo$attack_angle, 
+                           jgallo$attack_angle)
+
+# Using Davis, Khris to test - only increases by 1 degree but MASSIVE difference in wOBA (making us think
+#the glm for predicting launch angle isn't doing that well so maybe switch to GAM?) DIDN'T HELP
+kdavis <- batter_all_2019hp %>%
+  filter(player_name == "Davis, Khris")
+kdavis_woba <- mean(kdavis$woba_value, na.rm = TRUE)
+predicted_LA_adjust_attack(final_woba_model2, predicted_LA, kdavis, kdavis_woba, kdavis$attack_angle, 
+                           kdavis$attack_angle)
+# This is telling us the woba model isn't terrible at predicting Kris Davis so the problems we are having
+  #is with using the woba model on the mock data made though the LA model and sampling of EVs
+woba_kdavis <- tibble(gam.preds = predict(final_woba_model2, newdata = kdavis))
+kdavis_pred_woba <- mean(woba_kdavis$gam.preds, na.rm=TRUE)
+
+# Using Ramos, Wilson to test 
+wramos <- batter_all_2019hp %>%
+  filter(player_name == "Ramos, Wilson")
+wramos_woba <- mean(wramos$woba_value, na.rm = TRUE)
+predicted_LA_adjust_attack(final_woba_model2, predicted_LA, wramos, wramos_woba, wramos$attack_angle, 
+                           wramos$attack_angle)
+
+#ISSUE - IT SEEMS TO BE GIVING A .6 WOBA TO ATTACK ANGLES IN THE DOUBLE DIGITS SO IT CUTS OFF
 
