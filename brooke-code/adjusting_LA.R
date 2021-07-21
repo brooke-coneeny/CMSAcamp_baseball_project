@@ -24,6 +24,12 @@ batter_all_2019 <- batter_all_2019 %>%
 # Create linear model with the variables 
 predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data = batter_all_2019)
 
+batter_all_2019 %>%
+  ggplot(aes(x = attack_angle, y = plate_z, color = launch_angle)) +
+  geom_point() +
+  theme_bw()
+
+
 
 # Update attack angle and compare woba values 
 
