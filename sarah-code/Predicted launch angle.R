@@ -29,6 +29,7 @@ batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>%
 # Graph relationships between variables and LA
 batter_all_2019hp %>%
   ggplot(aes(x=attack_angle, y=launch_angle))+
+  geom_point(alpha=.5)+
   geom_smooth()
 
 batter_all_2019hp %>%
@@ -38,6 +39,8 @@ hist(batter_all_2019hp$plate_z)
 
 predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
 summary(predicted_LA)
+library(ggfortify)
+autoplot(predicted_LA)
 
 predicted_LA2 <- gam(launch_angle ~ s(attack_angle) + s(plate_z), data = batter_all_2019hp)
 gam.check(predicted_LA2)
@@ -73,7 +76,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     hits_at_angle <- player_data %>% 
       filter(launch_angle <= pred_angles$lm.preds[i]+3 & launch_angle >= pred_angles$lm.preds[i]-3)
     # Sample those hits, 10 for each predicted angle and take mean launch speed of those
-    EV_sample_index <- sample(1:nrow(hits_at_angle), 10, replace = TRUE)
+    EV_sample_index <- sample(1:nrow(hits_at_angle), 50, replace = TRUE)
     pred_EV <- player_data[EV_sample_index,] %>% summarize(the_EV = mean(launch_speed))
     # Add that launch speed to vector as the predicted launch speed 
     EV_vector1 <- c(EV_vector1, pred_EV$the_EV[1])
@@ -95,7 +98,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     hits_at_angle <- player_data %>% 
       filter(launch_angle <= pred_angles2$lm.preds[i]+3 & launch_angle >= pred_angles2$lm.preds[i]-3)
     # Sample those hits, 10 for each predicted angle and take mean launch speed of those
-    EV_sample_index <- sample(1:nrow(hits_at_angle), 10, replace = TRUE)
+    EV_sample_index <- sample(1:nrow(hits_at_angle), 50, replace = TRUE)
     pred_EV <- player_data[EV_sample_index,] %>% summarize(the_EV = mean(launch_speed))
     # Add that launch speed to vector as the predicted launch speed 
     EV_vector2 <- c(EV_vector2, pred_EV$the_EV[1])
@@ -185,6 +188,7 @@ wramos <- batter_all_2019hp %>%
 wramos_woba <- mean(wramos$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, wramos, wramos_woba, wramos$attack_angle, 
                            wramos$attack_angle)
+
 
 #ISSUE - IT SEEMS TO BE GIVING A .6 WOBA TO ATTACK ANGLES IN THE DOUBLE DIGITS SO IT CUTS OFF
 
