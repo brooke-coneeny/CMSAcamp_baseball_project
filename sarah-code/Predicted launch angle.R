@@ -209,13 +209,21 @@ predicted_LA_adjust_attack(final_woba_model2, predicted_LA, tkemp, tkemp_woba, t
 # Function to call adjust attack multiple times ---------------------------
 
 repeat_adjust_attack <- function(player_data, player_woba){
-  final_results <- tibble()
-  for(i in 5){
+  final_results <-tibble(predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
+                                                    player_data$attack_angle, player_data$attack_angle))
+  for(i in 1:4){
     results <- predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                              player_data$attack_angle, player_data$attack_angle)
-    final_results %>% add_row(results)
+    #final_results <- final_results %>% add_row(results)
+    final_results <- bind_rows(final_results, results)
   }
-  return (final_results)
+  #function_run_number <- as.tibble(c("Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Average"))
+  averages <- colMeans(final_results)
+  final_results <- bind_rows(final_results, averages)
+  rownames(final_results) <- c("Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Average")
+  #final_results <- add_column(function_run_number, .before = "original_woba")
+  return(final_results)
 }
 
 repeat_adjust_attack(mtrout, mtrout_woba)
+repeat_adjust_attack(tkemp, tkemp_woba)
