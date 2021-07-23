@@ -39,10 +39,14 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   # Model the predicted angles given the original attack angle
   pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
   
+  #create an rnorm with the standard deviation of the residuals to create noise
+  pred_angles <- pred_angles %>% mutate(noise = rnorm(length(pred_angles), mean = 0, sd = sigma(LA_model)),
+                         launch_angle = lm.preds + noise)
+  
   # Need to sample the data for each predicted angle to find what exit velocity we would give it 
   sampling_angles(pred_angles, player_data, EV_vector1)
   
-  modeled_data <- tibble(launch_angle = pred_angles$lm.preds, launch_speed = EV_vector1)
+  modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector1)
   preds1 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
   xwOBA1 <- mean(preds1$gam.preds, na.rm = TRUE)
   
@@ -52,10 +56,14 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   
   pred_angles2 <- tibble(lm.preds = predict(LA_model, newdata = plus_one_attack))
   
+  #create an rnorm with the standard deviation of the residuals to create noise
+  pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(length(pred_angles2), mean = 0, sd = sigma(LA_model)),
+                         launch_angle = lm.preds + noise)
+  
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   sampling_angles(pred_angles2, player_data, EV_vector2)
   
-  modeled_data_plus_one <- tibble(launch_angle = pred_angles2$lm.preds, launch_speed = EV_vector2)
+  modeled_data_plus_one <- tibble(launch_angle = pred_angles2$launch_angle, launch_speed = EV_vector2)
   preds2 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_plus_one))  
   xwOBA2 <- mean(preds2$gam.preds, na.rm = TRUE)
   
@@ -65,10 +73,14 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   
   pred_angles3 <- tibble(lm.preds = predict(LA_model, newdata = minus_one_attack))
   
+  #create an rnorm with the standard deviation of the residuals to create noise
+  pred_angles3 %>% mutate(noise = rnorm(length(pred_angles3), mean = 0, sd = sigma(LA_model)),
+                         launch_angle = lm.preds + noise)
+  
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   sampling_angles(pred_angles3, player_data, EV_vector3)
   
-  modeled_data_minus_one <- tibble(launch_angle = pred_angles3$lm.preds, launch_speed = EV_vector3)
+  modeled_data_minus_one <- tibble(launch_angle = pred_angles3$launch_angle, launch_speed = EV_vector3)
   preds3 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_minus_one))  
   xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
   
@@ -94,10 +106,10 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
 }
 
 sampling_angles <- function(pred_angles, player_data, EV_vector){
-  for(i in 1:length(pred_angles$lm.preds)){
+  for(i in 1:length(pred_angles$launch_angles)){
     # Filter for the player's launch angles plus or minus 3 degrees above the predicted LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= pred_angles$lm.preds[i]+3 & launch_angle >= pred_angles$lm.preds[i]-3)
+      filter(launch_angle <= pred_angles$launch_angles[i]+3 & launch_angle >= pred_angles$launch_angle[i]-3)
     # Sample those hits, 10 for each predicted angle and take mean launch speed of those
     EV_sample_index <- sample(1:nrow(hits_at_angle), 10, replace = TRUE)
     pred_EV <- player_data[EV_sample_index,] %>% summarize(the_EV = mean(launch_speed))
