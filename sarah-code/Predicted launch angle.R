@@ -291,7 +291,6 @@ repeat_adjust_attack <- function(player_data, player_woba){
   }
   averages <- colMeans(final_results)
   final_results <- bind_rows(final_results, averages)
-  rownames(final_results) <- c("Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Average")
   return(final_results)
 }
 
