@@ -51,7 +51,8 @@ batter_all_2019hp %>%
 
 batter_all_2019hp %>%
   ggplot(aes(x=plate_z, y=launch_angle))+
-  geom_smooth()
+  geom_smooth()+
+  geom_point(alpha=.1)
 hist(batter_all_2019hp$plate_z)
 
 # The model we are sticking with
@@ -107,8 +108,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
-               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
+      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+               player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -121,9 +122,9 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   preds1 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
   xwOBA1 <- mean(preds1$gam.preds, na.rm = TRUE)
 
-  # Repeat with a +1 attack angle
+  # Repeat with a +3 attack angle
   plus_one_attack <- player_data
-  plus_one_attack$attack_angle <- plus_one_attack$attack_angle + 1
+  plus_one_attack$attack_angle <- plus_one_attack$attack_angle + 3
   
   pred_angles2 <- tibble(lm.preds = predict(LA_model, newdata = plus_one_attack))
   pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(n = length(pred_angles2), mean = 0, 
@@ -144,8 +145,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
-               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
+      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+               player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -157,9 +158,9 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   preds2 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_plus_one))  
   xwOBA2 <- mean(preds2$gam.preds, na.rm = TRUE)
 
-  # Repeat with a -1 attack angle
+  # Repeat with a -3 attack angle
   minus_one_attack <- player_data
-  minus_one_attack$attack_angle <- minus_one_attack$attack_angle - 1
+  minus_one_attack$attack_angle <- minus_one_attack$attack_angle - 3
   
   pred_angles3 <- tibble(lm.preds = predict(LA_model, newdata = minus_one_attack))
   pred_angles3 <- pred_angles3 %>% mutate(noise = rnorm(n = length(pred_angles3), mean = 0, 
@@ -180,8 +181,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
-               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
+      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+               player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -193,29 +194,29 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   preds3 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_minus_one))  
   xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
   
-  print(player_data$attack_angle[1])
-  print(modeled_data)
-  print(min(modeled_data$launch_angle))
-  print(max(modeled_data$launch_angle))
-  print(plus_one_attack$attack_angle[1])
-  print(modeled_data_plus_one)
-  print(min(modeled_data_plus_one$launch_angle))
-  print(max(modeled_data_plus_one$launch_angle))
-  print(minus_one_attack$attack_angle[1])
-  print(modeled_data_minus_one)
-  print(min(modeled_data_minus_one$launch_angle))
-  print(max(modeled_data_minus_one$launch_angle))
+  # print(player_data$attack_angle[1])
+  # print(modeled_data)
+  # print(min(modeled_data$launch_angle))
+  # print(max(modeled_data$launch_angle))
+  # print(plus_one_attack$attack_angle[1])
+  # print(modeled_data_plus_one)
+  # print(min(modeled_data_plus_one$launch_angle))
+  # print(max(modeled_data_plus_one$launch_angle))
+  # print(minus_one_attack$attack_angle[1])
+  # print(modeled_data_minus_one)
+  # print(min(modeled_data_minus_one$launch_angle))
+  # print(max(modeled_data_minus_one$launch_angle))
   
   
   # If original < +1
   if(xwOBA1 < xwOBA2){
      # Recursively call with +1 attack angle data
-    predicted_LA_adjust_attack(woba_model, LA_model, plus_one_attack, orig_woba, orig_attack, attack+1)
+    predicted_LA_adjust_attack(woba_model, LA_model, plus_one_attack, orig_woba, orig_attack, attack+3)
   }
   # Else if original < -1
   else if (xwOBA1 < xwOBA3){
     # Recursively call with -1 attack angle data
-    predicted_LA_adjust_attack(woba_model, LA_model, minus_one_attack, orig_woba, orig_attack, attack-1)
+    predicted_LA_adjust_attack(woba_model, LA_model, minus_one_attack, orig_woba, orig_attack, attack-3)
   }
   # Else
   else{
@@ -284,14 +285,14 @@ predicted_LA_adjust_attack(final_woba_model2, predicted_LA, tkemp, tkemp_woba, t
 repeat_adjust_attack <- function(player_data, player_woba){
   final_results <-tibble(predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                                                     player_data$attack_angle, player_data$attack_angle))
-  for(i in 1:4){
+  for(i in 1:99){
     results <- predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                              player_data$attack_angle, player_data$attack_angle)
     final_results <- bind_rows(final_results, results)
   }
   averages <- colMeans(final_results)
   final_results <- bind_rows(final_results, averages)
-  return(final_results)
+  return(tail(final_results))
 }
 
 repeat_adjust_attack(mtrout, mtrout_woba)
