@@ -16,6 +16,23 @@ batter_all_1921 <- bind_rows(batter_all_2019, batter_all_2020, batter_all_2021)
 batter_all_1921hp <- batter_all_1921 %>%
   filter(description == "hit_into_play")
 
+# Function that cleans up the edges (if a launch angle is outside of the edges then replace it with the
+  #+- 2sd value)
+clean_edges <- function (data){
+  for(i in 1:length(data$launch_angle)){
+    if(data$launch_angle[i] < (mean(data$launch_angle)-2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)-2*sd(data$launch_angle))
+    }
+    else if(data$launch_angle[i] > (mean(data$launch_angle)+2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)+2*sd(data$launch_angle))
+    }
+    else{
+      data$cleaned_launch_angle[i]<-data$launch_angle[i]
+    }
+  }
+  return (data)
+}
+
 
 # Create model for attack angle and height predicting LA ------------------
 
@@ -37,6 +54,7 @@ batter_all_2019hp %>%
   geom_smooth()
 hist(batter_all_2019hp$plate_z)
 
+# The model we are sticking with
 predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
 summary(predicted_LA)
 library(ggfortify)
@@ -48,7 +66,7 @@ gam.check(predicted_LA2)
 predicted_LA3 <- gam(launch_angle ~ s(attack_angle, plate_z, k=75), data = batter_all_2019hp)
 gam.check(predicted_LA3) #worse but might need a higher k?
 
-# Final Model -------------------------------------------------------------
+# Final wOBA Model -------------------------------------------------------------
 
 final_woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019hp, 
                          method = "REML")
@@ -68,6 +86,7 @@ EV_vector3 <- vector()    #for minus one attack angle
 #output purposes, and the attack angle which will be modified in the recursive call
 predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_woba, orig_attack, attack)
   {
+  
   # Model the predicted angles given the original attack angle
   pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
   pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
@@ -77,7 +96,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   for(i in 1:length(pred_angles$launch_angle)){
     
-    # Check all launch angles and if it outside of 2 sd of their mean - replace with the cap (plus or minus)
+    # Check all predicted launch angles and if it outside of 2 sd of their mean - replace with 
+            #the cap (plus or minus)
     if(pred_angles$launch_angle[i] < (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))){
       pred_angles$launch_angle[i] <- (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))
     }
@@ -85,10 +105,10 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
       pred_angles$launch_angle[i] <- (mean(player_data$launch_angle)+2*sd(player_data$launch_angle))
     }
     
-    # Filter for the player's launch angles plus or minus 3 degrees above the predicted LA
+    # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= pred_angles$launch_angle[i]+3 & launch_angle >= pred_angles$launch_angle[i]-3 &
-               !is.na(launch_speed))
+      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
+               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -96,6 +116,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     EV_vector1 <- c(EV_vector1, pred_EV$launch_speed)
   }
   
+  # Merge predicted launch angle and sampled exit velocity
   modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector1)
   preds1 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
   xwOBA1 <- mean(preds1$gam.preds, na.rm = TRUE)
@@ -112,18 +133,20 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   for(i in 1:length(pred_angles2$launch_angle)){
     
-    # Check all launch angles and if it outside of 2 sd of their mean - replace with the cap (plus or minus)
+    # Check all predicted launch angles and if it outside of 2 sd of their mean - replace with 
+    #the cap (plus or minus)
     if(pred_angles2$launch_angle[i] < (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))){
       pred_angles2$launch_angle[i] <- (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))
     }
     else if(pred_angles2$launch_angle[i] > (mean(player_data$launch_angle)+2*sd(player_data$launch_angle))){
       pred_angles2$launch_angle[i] <- (mean(player_data$launch_angle)+2*sd(player_data$launch_angle))
     }
-    # Filter for the player's launch angles plus or minus 3 degrees above the predicted LA
+    
+    # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= pred_angles2$launch_angle[i]+3 & launch_angle >= pred_angles2$launch_angle[i]-3 &
-               !is.na(launch_speed))
-    # Sample those hits, 10 for each predicted angle and take mean launch speed of those
+      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
+               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
+    # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
     # Add that launch speed to vector as the predicted launch speed 
@@ -146,7 +169,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   # Need to sample the data for each predicted angle to find what exit velocity we would give it
   for(i in 1:length(pred_angles3$launch_angle)){
     
-    # Check all launch angles and if it outside of 2 sd of their mean - replace with the cap (plus or minus)
+    # Check all predicted launch angles and if it outside of 2 sd of their mean - replace with 
+    #the cap (plus or minus)
     if(pred_angles3$launch_angle[i] < (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))){
       pred_angles3$launch_angle[i] <- (mean(player_data$launch_angle)-2*sd(player_data$launch_angle))
     }
@@ -154,11 +178,11 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
       pred_angles3$launch_angle[i] <- (mean(player_data$launch_angle)+2*sd(player_data$launch_angle))
     }
     
-    # Filter for the player's launch angles plus or minus 3 degrees above the predicted LA
+    # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= pred_angles3$launch_angle[i]+3 & launch_angle >= pred_angles3$launch_angle[i]-3 &
-               !is.na(launch_speed))
-    # Sample those hits, 10 for each predicted angle and take mean launch speed of those
+      filter(launch_angle <= player_data$cleaned_launch_angle[i]+3 & cleaned_launch_angle >= 
+               player_data$cleaned_launch_angle[i]-3 & !is.na(launch_speed))
+    # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
     # Add that launch speed to vector as the predicted launch speed 
@@ -168,6 +192,20 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   modeled_data_minus_one <- tibble(launch_angle = pred_angles3$launch_angle, launch_speed = EV_vector3)
   preds3 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_minus_one))  
   xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
+  
+  print(player_data$attack_angle[1])
+  print(modeled_data)
+  print(min(modeled_data$launch_angle))
+  print(max(modeled_data$launch_angle))
+  print(plus_one_attack$attack_angle[1])
+  print(modeled_data_plus_one)
+  print(min(modeled_data_plus_one$launch_angle))
+  print(max(modeled_data_plus_one$launch_angle))
+  print(minus_one_attack$attack_angle[1])
+  print(modeled_data_minus_one)
+  print(min(modeled_data_minus_one$launch_angle))
+  print(max(modeled_data_minus_one$launch_angle))
+  
   
   # If original < +1
   if(xwOBA1 < xwOBA2){
@@ -188,23 +226,29 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   
 }
 
+
+# Test update attack angle function ---------------------------------------
+
 # Using Jason Heyward to test
 jhey <- batter_all_2019hp %>%
-  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jhey, jhey_woba, jhey$attack_angle, 
                            jhey$attack_angle)
 
 # Using Mike Trout to test b/c it should be short
 mtrout <- batter_all_2019hp %>%
-  filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
+  clean_edges()
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
                            mtrout$attack_angle)
 
 # Using Joey Gallo to test 
 jgallo <- batter_all_2019hp %>%
-  filter(player_name == "Gallo, Joey"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Gallo, Joey"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 jgallo_woba <- mean(jgallo$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jgallo, jgallo_woba, jgallo$attack_angle, 
                            jgallo$attack_angle)
@@ -212,21 +256,24 @@ predicted_LA_adjust_attack(final_woba_model2, predicted_LA, jgallo, jgallo_woba,
 # Using Davis, Khris to test - only increases by 1 degree but MASSIVE difference in wOBA (making us think
 #the glm for predicting launch angle isn't doing that well so maybe switch to GAM?) DIDN'T HELP
 kdavis <- batter_all_2019hp %>%
-  filter(player_name == "Davis, Khris"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Davis, Khris"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 kdavis_woba <- mean(kdavis$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, kdavis, kdavis_woba, kdavis$attack_angle, 
                            kdavis$attack_angle)
 
 # Using Ramos, Wilson to test 
 wramos <- batter_all_2019hp %>%
-  filter(player_name == "Ramos, Wilson"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Ramos, Wilson"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 wramos_woba <- mean(wramos$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, wramos, wramos_woba, wramos$attack_angle, 
                            wramos$attack_angle)
 
 # Using Kemp, Tony to test 
 tkemp <- batter_all_2019hp %>%
-  filter(player_name == "Kemp, Tony"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+  filter(player_name == "Kemp, Tony"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(final_woba_model2, predicted_LA, tkemp, tkemp_woba, tkemp$attack_angle, 
                            tkemp$attack_angle)
@@ -240,18 +287,15 @@ repeat_adjust_attack <- function(player_data, player_woba){
   for(i in 1:4){
     results <- predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                              player_data$attack_angle, player_data$attack_angle)
-    #final_results <- final_results %>% add_row(results)
     final_results <- bind_rows(final_results, results)
   }
-  #function_run_number <- as.tibble(c("Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Average"))
   averages <- colMeans(final_results)
   final_results <- bind_rows(final_results, averages)
   rownames(final_results) <- c("Run 1", "Run 2", "Run 3", "Run 4", "Run 5", "Average")
-  #final_results <- add_column(function_run_number, .before = "original_woba")
   return(final_results)
 }
 
 repeat_adjust_attack(mtrout, mtrout_woba)
 repeat_adjust_attack(tkemp, tkemp_woba)
 repeat_adjust_attack(jhey, jhey_woba)
-repeat_adjust_attack(jgallo, jgallo_woba) #DOESN'T WORK???
+repeat_adjust_attack(jgallo, jgallo_woba) 
