@@ -108,7 +108,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
                player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
@@ -145,7 +145,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
                player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
@@ -181,7 +181,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
+      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
                player_data$attack_angle[i]-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
