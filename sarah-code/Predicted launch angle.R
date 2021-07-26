@@ -289,7 +289,7 @@ predicted_LA_adjust_attack(final_woba_model2, predicted_LA, tkemp, tkemp_woba, t
 repeat_adjust_attack <- function(player_data, player_woba){
   final_results <-tibble(predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                                                     player_data$attack_angle, player_data$attack_angle))
-  for(i in 1:199){
+  for(i in 1:99){
     results <- predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                              player_data$attack_angle, player_data$attack_angle)
     final_results <- bind_rows(final_results, results)
@@ -307,21 +307,23 @@ repeat_adjust_attack(jgallo, jgallo_woba)
 
 # Testing all possible attack angles --------------------------------------
 
-EV_vector3 <- vector()    # To hold launch speeds for this function
 test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
-  
-  # Initialize place for results
-  all_attack_results <- tibble(original_attack_angle = c(), possible_attack = c(), original_woba = c(), 
-                               predicted_woba = c())
+  # Initialize vectors for results
+  original_attack <- c(rep(orig_attack[1], times=31))
+  original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
+  possible_attack_vec <- c(0:30)
+  predicted_woba <- c()
   
   for(possible_attack in 0:30){
+    EV_vector4 <- vector()    # To hold launch speeds for this function
+    
     # Find the possible launch angle for this attack angle
     player_data$attack_angle <- possible_attack
     pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
     pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
                                                         sd = sigma(LA_model)), 
                                           launch_angle = lm.preds + noise)
-    
+
     for(i in 1:length(pred_angles$launch_angle)){
       # Sample a launch speed around their actual attack angle
       hits_at_angle <- player_data %>% 
@@ -339,13 +341,32 @@ test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
     preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
     xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
     
-    # Put into tibble with results
-    all_attack_results$original_attack_angle.append(orig_attack)
-    all_attack_results$possible_attack.append(ossible_attack)
-    all_attack_results$original_woba.append(mean(player_data$woba_value, na.rm= TRUE))
-    all_attack_results$predicted_woba.append(xwOBA)
+    predicted_woba <- c(predicted_woba, xwOBA)
   }
-  return (all_attack_results)
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                 original_woba = original_woba, predicted_woba = predicted_woba))
 }
 
-test_all_attacl(final_woba_model2, predicted_LA, mtrout, mtrout$attack_angle)
+mtrout_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, mtrout, mtrout$attack_angle)
+mtrout_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()
+
+jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
+jhey_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()
+
+jgallo_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jgallo, jgallo$attack_angle)
+jgallo_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()
+
+tkemp_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, tkemp, tkemp$attack_angle)
+tkemp_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()
