@@ -108,8 +108,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
-               player_data$attack_angle[i]-3 & !is.na(launch_speed))
+      filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+               orig_attack-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -127,7 +127,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   plus_one_attack$attack_angle <- plus_one_attack$attack_angle + 3
   
   pred_angles2 <- tibble(lm.preds = predict(LA_model, newdata = plus_one_attack))
-  pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(n = length(pred_angles2), mean = 0, 
+  pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(n = length(pred_angles2$lm.preds), mean = 0, 
                                                        sd = sigma(LA_model)), 
                                          launch_angle = lm.preds + noise)
   
@@ -145,8 +145,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
-               player_data$attack_angle[i]-3 & !is.na(launch_speed))
+      filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+               orig_attack-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -163,7 +163,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   minus_one_attack$attack_angle <- minus_one_attack$attack_angle - 3
   
   pred_angles3 <- tibble(lm.preds = predict(LA_model, newdata = minus_one_attack))
-  pred_angles3 <- pred_angles3 %>% mutate(noise = rnorm(n = length(pred_angles3), mean = 0, 
+  pred_angles3 <- pred_angles3 %>% mutate(noise = rnorm(n = length(pred_angles3$lm.preds), mean = 0, 
                                                         sd = sigma(LA_model)), 
                                           launch_angle = lm.preds + noise)
   
@@ -181,8 +181,8 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
     
     # Filter for the player's launch angles plus or minus 3 degrees above the ACTUAL LA
     hits_at_angle <- player_data %>% 
-      filter(cleaned_launch_angle <= player_data$attack_angle[i]+3 & launch_angle >= 
-               player_data$attack_angle[i]-3 & !is.na(launch_speed))
+      filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+               orig_attack-3 & !is.na(launch_speed))
     # Randomly sample 1 exit velocity form similar hits
     EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
     pred_EV <- hits_at_angle[EV_sample_index,] 
@@ -194,18 +194,22 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   preds3 <- tibble(gam.preds = predict(woba_model, newdata = modeled_data_minus_one))  
   xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
   
-  print(player_data$attack_angle[1])
-  print(modeled_data)
-  print(min(modeled_data$launch_angle))
-  print(max(modeled_data$launch_angle))
-  print(plus_one_attack$attack_angle[1])
-  print(modeled_data_plus_one)
-  print(min(modeled_data_plus_one$launch_angle))
-  print(max(modeled_data_plus_one$launch_angle))
-  print(minus_one_attack$attack_angle[1])
-  print(modeled_data_minus_one)
-  print(min(modeled_data_minus_one$launch_angle))
-  print(max(modeled_data_minus_one$launch_angle))
+
+  # print(player_data$attack_angle[1])
+  # print(pred_angles)    
+  # print(modeled_data)
+  # print(min(modeled_data$launch_angle))
+  # print(max(modeled_data$launch_angle))
+  # print(plus_one_attack$attack_angle[1])
+  # print(pred_angles2)
+  # print(modeled_data_plus_one)
+  # print(min(modeled_data_plus_one$launch_angle))
+  # print(max(modeled_data_plus_one$launch_angle))
+  # print(minus_one_attack$attack_angle[1])
+  # print(pred_angles3)
+  # print(modeled_data_minus_one)
+  # print(min(modeled_data_minus_one$launch_angle))
+  # print(max(modeled_data_minus_one$launch_angle))
   
   
   # If original < +1
