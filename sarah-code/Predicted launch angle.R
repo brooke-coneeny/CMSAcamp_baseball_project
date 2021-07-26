@@ -289,7 +289,7 @@ predicted_LA_adjust_attack(final_woba_model2, predicted_LA, tkemp, tkemp_woba, t
 repeat_adjust_attack <- function(player_data, player_woba){
   final_results <-tibble(predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                                                     player_data$attack_angle, player_data$attack_angle))
-  for(i in 1:99){
+  for(i in 1:199){
     results <- predicted_LA_adjust_attack(final_woba_model2, predicted_LA, player_data, player_woba, 
                              player_data$attack_angle, player_data$attack_angle)
     final_results <- bind_rows(final_results, results)
@@ -303,3 +303,49 @@ repeat_adjust_attack(mtrout, mtrout_woba)
 repeat_adjust_attack(tkemp, tkemp_woba)
 repeat_adjust_attack(jhey, jhey_woba)
 repeat_adjust_attack(jgallo, jgallo_woba) 
+
+
+# Testing all possible attack angles --------------------------------------
+
+EV_vector3 <- vector()    # To hold launch speeds for this function
+test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
+  
+  # Initialize place for results
+  all_attack_results <- tibble(original_attack_angle = c(), possible_attack = c(), original_woba = c(), 
+                               predicted_woba = c())
+  
+  for(possible_attack in 0:30){
+    # Find the possible launch angle for this attack angle
+    player_data$attack_angle <- possible_attack
+    pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
+    pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                        sd = sigma(LA_model)), 
+                                          launch_angle = lm.preds + noise)
+    
+    for(i in 1:length(pred_angles$launch_angle)){
+      # Sample a launch speed around their actual attack angle
+      hits_at_angle <- player_data %>% 
+        filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                 orig_attack-3 & !is.na(launch_speed))
+      # Randomly sample 1 exit velocity form similar hits
+      EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+      pred_EV <- hits_at_angle[EV_sample_index,] 
+      # Add that launch speed to vector as the predicted launch speed 
+      EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+    }
+    
+    # Create modeled data for this attack angle
+    modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+    preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+    xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+    
+    # Put into tibble with results
+    all_attack_results$original_attack_angle.append(orig_attack)
+    all_attack_results$possible_attack.append(ossible_attack)
+    all_attack_results$original_woba.append(mean(player_data$woba_value, na.rm= TRUE))
+    all_attack_results$predicted_woba.append(xwOBA)
+  }
+  return (all_attack_results)
+}
+
+test_all_attacl(final_woba_model2, predicted_LA, mtrout, mtrout$attack_angle)
