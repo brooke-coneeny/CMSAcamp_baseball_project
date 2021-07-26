@@ -186,3 +186,10 @@ heyward_density_2019
 ```
 ]
 ---
+```{r}
+#Slide to simply explain the creation of the woba model (why we needed a gam and how it places value)
+#How we adjust attack angle and measure the predicted change in woba (the final way we did it with           graphs)
+#Erin's EDA
+#Other considerations for the future
+```
+

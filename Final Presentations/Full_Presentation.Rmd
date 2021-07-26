@@ -536,3 +536,13 @@ knitr::kable(head(result_trout), format = 'html')
   - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
 ]
 ---
+
+```{r}
+#Slide for Adam's way and the issues there (doens't include pitch information)
+#Slide (or more) for our final way in adjusting launch angle + graphs 
+#Slide for Erin's EDA
+#Final slides to wrap up other considerations (swinging differently means what you're pitched changes,
+  #what are the mental implications of changing a hitter's swing, if the woba change isn't "worth it"
+  #there might not be a reason to change the hitter's swing)
+```
+
