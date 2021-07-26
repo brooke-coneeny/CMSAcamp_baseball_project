@@ -127,7 +127,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   plus_one_attack$attack_angle <- plus_one_attack$attack_angle + 3
   
   pred_angles2 <- tibble(lm.preds = predict(LA_model, newdata = plus_one_attack))
-  pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(n = length(pred_angles2), mean = 0, 
+  pred_angles2 <- pred_angles2 %>% mutate(noise = rnorm(n = length(pred_angles2$lm.preds), mean = 0, 
                                                        sd = sigma(LA_model)), 
                                          launch_angle = lm.preds + noise)
   
@@ -163,7 +163,7 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   minus_one_attack$attack_angle <- minus_one_attack$attack_angle - 3
   
   pred_angles3 <- tibble(lm.preds = predict(LA_model, newdata = minus_one_attack))
-  pred_angles3 <- pred_angles3 %>% mutate(noise = rnorm(n = length(pred_angles3), mean = 0, 
+  pred_angles3 <- pred_angles3 %>% mutate(noise = rnorm(n = length(pred_angles3$lm.preds), mean = 0, 
                                                         sd = sigma(LA_model)), 
                                           launch_angle = lm.preds + noise)
   
@@ -195,21 +195,21 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   xwOBA3 <- mean(preds3$gam.preds, na.rm = TRUE)
   
 
-  print(player_data$attack_angle[1])
-  print(pred_angles)    
-  print(modeled_data)
-  print(min(modeled_data$launch_angle))
-  print(max(modeled_data$launch_angle))
-  print(plus_one_attack$attack_angle[1])
-  print(pred_angles2)
-  print(modeled_data_plus_one)
-  print(min(modeled_data_plus_one$launch_angle))
-  print(max(modeled_data_plus_one$launch_angle))
-  print(minus_one_attack$attack_angle[1])
-  print(pred_angles3)
-  print(modeled_data_minus_one)
-  print(min(modeled_data_minus_one$launch_angle))
-  print(max(modeled_data_minus_one$launch_angle))
+  # print(player_data$attack_angle[1])
+  # print(pred_angles)    
+  # print(modeled_data)
+  # print(min(modeled_data$launch_angle))
+  # print(max(modeled_data$launch_angle))
+  # print(plus_one_attack$attack_angle[1])
+  # print(pred_angles2)
+  # print(modeled_data_plus_one)
+  # print(min(modeled_data_plus_one$launch_angle))
+  # print(max(modeled_data_plus_one$launch_angle))
+  # print(minus_one_attack$attack_angle[1])
+  # print(pred_angles3)
+  # print(modeled_data_minus_one)
+  # print(min(modeled_data_minus_one$launch_angle))
+  # print(max(modeled_data_minus_one$launch_angle))
   
   
   # If original < +1
