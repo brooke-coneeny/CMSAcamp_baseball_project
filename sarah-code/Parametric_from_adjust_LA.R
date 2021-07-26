@@ -58,6 +58,12 @@ ggplot() +
   #geom_point(data = batter_all_2019hp_good, aes(x = launch_speed, y = launch_angle)) +
   #stat_density_2d(data = batter_all_2019hp_good, aes(x = launch_speed, y = launch_angle), colour = 'black')
 
+ggplot() + stat_density(data = batter_all_2019hp %>% filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
+                          filter(player_name == player) #%>% 
+                        , aes(launch_speed), alpha = .2, colour = 'blue') + 
+  geom_line(data = data.frame(launch_speed = 30:120) %>% mutate(density = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3])), 
+            aes(launch_speed, density), size = 1)
+
 # Gets the probabilities Gallo hits any combination of LA/EV and turns it into a mock data set
 probs_Gallo <- var_range %>% 
   mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
