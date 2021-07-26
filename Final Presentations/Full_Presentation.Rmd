@@ -430,7 +430,6 @@ vis.gam(x=woba_model2,
         nlevels = 20)
 ```
 ---
----
 ### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
 
 .pull-left[
