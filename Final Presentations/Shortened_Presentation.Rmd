@@ -185,11 +185,81 @@ heyward_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = heyward_stat_densi
 heyward_density_2019
 ```
 ]
+
 ---
-```{r}
-#Slide to simply explain the creation of the woba model (why we needed a gam and how it places value)
-#How we adjust attack angle and measure the predicted change in woba (the final way we did it with           graphs)
-#Erin's EDA
-#Other considerations for the future
+# Using a player's attack angle to predict launch angles 
+
+- A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
+
+- The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+
+.pull-left[
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg")
 ```
+]
+
+.pull-right[
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png")
+```
+]
+
+---
+# We created a GAM to model player wOBA predictions 
+
+.pull-left[
+- We fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
+**exit velocity** with the target **wOBA**
+
+- GAMs have the ability to model complex *non-linear and non-monotonic* relationships between predictors and response variables, such as we see when we smooth the relationship between predictors **exit velocity** and **launch angle** with **wOBA**
+]
+
+.pull-right[
+```{r, echo=FALSE, fig.width = 6, fig.height = 2.5}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(launch_angle, woba_value))+
+  geom_smooth(se = FALSE)+
+  scale_x_continuous(limits = c(-40, 60))+
+  labs(title = "Launch angle vs. wOBA", x="", y="")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+
+```{r, echo =FALSE, fig.width = 6, fig.height = 2.5}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(launch_speed, woba_value))+
+  geom_smooth(se = FALSE)+
+  scale_x_continuous(limits = c(50, 120))+
+  labs(title = "Exit Velocity vs. wOBA", x="", y="")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+]
+
+---
+# Adjusting attack angle to visualize change in wOBA
+
+- Adjusting the attack angle leads to different launch angles and therefore a change in wOBA
+
+- We created a function which shows us how the change in attack angle effects the predicted wOBA that our model produces 
+
+---
+# Looking forward to the effects on strike out rates 
+
+
 
