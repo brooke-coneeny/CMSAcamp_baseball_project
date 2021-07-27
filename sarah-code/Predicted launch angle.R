@@ -318,7 +318,7 @@ test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
     
     for(possible_attack in 0:30){
         # Repeat 10 times
-        for(n in 1:3){
+        for(n in 1:10){
           EV_vector4 <- vector()    # To hold launch speeds for this function
           
           # Find the possible launch angle for this attack angle
