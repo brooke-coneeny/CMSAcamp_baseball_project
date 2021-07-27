@@ -358,7 +358,11 @@ mtrout_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, mtrout,
 mtrout_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
   geom_line()+
-  geom_smooth()
+  geom_smooth()+
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Mike Trout")
 
 jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
 jhey_attack_angles %>%

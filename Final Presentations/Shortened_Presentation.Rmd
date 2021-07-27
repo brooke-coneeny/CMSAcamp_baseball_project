@@ -187,27 +187,7 @@ heyward_density_2019
 ]
 
 ---
-# Using a player's attack angle to predict launch angles 
 
-- A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
-
-- The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
-
-- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
-
-.pull-left[
-```{r out.width='40%', echo = FALSE, fig.align='center'}
-knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg")
-```
-]
-
-.pull-right[
-```{r out.width='40%', echo = FALSE, fig.align='center'}
-knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png")
-```
-]
-
----
 # We created a GAM to model player wOBA predictions 
 
 .pull-left[
@@ -252,14 +232,128 @@ batter_all_2019 %>%
 ]
 
 ---
+# Using a player's attack angle to predict launch angles 
+
+- A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
+
+- The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+
+.pull-left[
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg")
+```
+]
+
+.pull-right[
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png")
+```
+]
+
+---
 # Adjusting attack angle to visualize change in wOBA
 
-- Adjusting the attack angle leads to different launch angles and therefore a change in wOBA
+- When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
-- We created a function which shows us how the change in attack angle effects the predicted wOBA that our model produces 
+- Exit velcoties were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+
+-This data was run though the wOBA model to generate predictions of the player's potential production
+
+.pull-left[
+```{r, echo=FALSE, fig.height='40%'}
+test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
+    
+    # Initialize vectors for results
+    original_attack <- c(rep(orig_attack[1], times=31))
+    original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
+    possible_attack_vec <- c(0:30)
+    predicted_woba <- c()
+    avg_predicted_woba <- c()
+    
+    for(possible_attack in 0:30){
+        # Repeat 10 times
+        for(n in 1:10){
+          EV_vector4 <- vector()    # To hold launch speeds for this function
+          
+          # Find the possible launch angle for this attack angle
+          player_data$attack_angle <- possible_attack
+          pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
+          pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                              sd = sigma(LA_model)), 
+                                                launch_angle = lm.preds + noise)
+      
+          for(i in 1:length(pred_angles$launch_angle)){
+            # Sample a launch speed around their actual attack angle
+            hits_at_angle <- player_data %>% 
+              filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                       orig_attack-3 & !is.na(launch_speed))
+            # Randomly sample 1 exit velocity form similar hits
+            EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+            pred_EV <- hits_at_angle[EV_sample_index,] 
+            # Add that launch speed to vector as the predicted launch speed 
+            EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+          }
+          
+          # Create modeled data for this attack angle
+          modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+          preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+          xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+          
+          predicted_woba <- c(predicted_woba, xwOBA)
+        }
+      avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+    }
+    return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                   original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
+}
+
+mtrout_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, mtrout, mtrout$attack_angle)
+mtrout_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  theme_bw()+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Mike Trout")
+
+```
+
+]
+
+.pull-right[
+```{r, echo=FALSE, fig.height='40%'}
+jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
+jhey_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  geom_vline(xintercept = jhey$attack_angle, color="red", linetype = "dashed")+
+  theme_bw()+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
+```
+
+]
 
 ---
 # Looking forward to the effects on strike out rates 
+
+---
+### Next Steps: for the long term we are interested in...
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg")
+```
 
 
 
