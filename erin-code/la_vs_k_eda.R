@@ -1,5 +1,7 @@
 library(tidyverse)
 library(baseballr)
+
+#load the data --------------------------------------------------------------
 batter_all_2016 <- read_rds("private_data/all2016data.rds")
 batter_all_2017 <- read_rds("private_data/all2017data.rds")
 batter_all_2018 <- read_rds("private_data/all2018data.rds")
@@ -24,6 +26,7 @@ batter_all_2021 <- batter_all_2021 %>%
 batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
                              batter_all_2019, batter_all_2020, batter_all_2021)
 
+#create the main dataset -----------------------------------------------------
 #find each player's attack angle in each season
 attack_angles <- batter_all_1621 %>%
   filter(description == "hit_into_play") %>%
@@ -52,7 +55,7 @@ batted_balls <- batter_all_1621 %>%
   count() %>%
   rename(balls_in_play = n)
 
-#find each player's number of strikeouts per 10 plate appearances
+#find each player's number of strikeouts
 strikeouts <- batter_all_1621 %>%
   group_by(player_name, year) %>%
   filter(events %in% c("strikeout", "strikeout_double_play")) %>%
@@ -75,14 +78,8 @@ strikeout_eda <- plate_appearances %>%
   mutate(k_percent = K/n_pa) %>%
   filter(balls_in_play >=50)
 
-#glm for strikeout probability
-k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
-summary(k_probability)
-
-#change in attack angle with change in K rate and woba relationship
-
 # create plot of launch angle versus strikeout percentage and plot of attack angle versus 
-#strikeout percentage
+#strikeout percentage -------------------------------------------------------
 strikeout_eda %>%
   ggplot(aes(x=avg_launch_angle, y=k_percent)) +
   geom_point()+
@@ -136,28 +133,33 @@ overall_change_1617 <- AA_change_1617 %>%
   filter(attack_angle >=0) %>%
   mutate(AA_group = cut(attack_angle, breaks = c(0, 10, 15, 20, 35), 
                         labels = c("0-10", "10-15", "15-20", "20-35")))
-  
 
+#plot of change in strikeout percentage grouped by 2017 launch angle
 overall_change_1617 %>%
   filter(!is.na(AA_group) & attack_angle_change <=15) %>%
   ggplot(aes(x=attack_angle_change, y=k_change))+
   geom_point()+
   geom_smooth()+
+  labs(x="2017-2016 attack angle", y="2017 K% - 2016%")+
   facet_wrap(~AA_group)+
   theme_minimal()
 
+#player attack angle in 2016 versus 2017
 strikeout_eda %>%
   mutate(year = as.integer(year)) %>%
   filter(year %in% c(2016,2017)) %>%
   pivot_wider(id_cols = player_name, names_from =year, values_from = attack_angle) %>%
   ggplot(aes(x=`2016`, y=`2017`))+
   geom_point()+
-  geom_abline(a=0, b=1)
+  labs(x="2016 attack angle", y="2017 attack angle")+
+  geom_abline(a=0, b=1)+
+  theme_minimal()
   
+#glm for strikeout probability
+k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
+summary(k_probability)
 
-  
-
-
+#change in attack angle with change in K rate and woba relationship
 
 #finding players that have changed their average launch angle --------------
 
@@ -182,7 +184,8 @@ AA_range_players <- strikeout_eda %>%
 
 AA_range_regular_players <- regular_players %>%
   left_join(AA_range_players, by = "player_name")
-  
+
+#plot showing change in max versus min attack angle and resulting difference in strikeout percentage
 strikeout_eda %>%
   group_by(player_name) %>%
   mutate(n_seasons = n()) %>%
@@ -192,8 +195,10 @@ strikeout_eda %>%
   summarize(attack_range = max(attack_angle) - min(attack_angle), 
             k_range = k_percent[which.max(attack_angle)] - k_percent[which.min(attack_angle)]) %>%
   ggplot(aes(x=attack_range, y=k_range))+
+  labs(x="Max - min attack angle", y="K% at max - min attack angle")+
   geom_point()+
-  geom_smooth()
+  geom_smooth()+
+  theme_minimal()
 #could there still be relationship of k rate in back to back seasons?
 #condition on players that increased their launch angle
 
