@@ -57,7 +57,7 @@ hist(batter_all_2019hp$plate_z)
 
 # The model we are sticking with
 predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
-write_rds(predicted_LA, "public_data/LA_model")
+write_rds(predicted_LA, "public_data/LA_model.rds")
 summary(predicted_LA)
 library(ggfortify)
 autoplot(predicted_LA)
@@ -364,7 +364,7 @@ mtrout_attack_angles %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
-write_rds(mtrout_attack_angles, "public_data/mtrout_attack_angles")
+write_rds(mtrout_attack_angles, "public_data/mtrout_attack_angles.rds")
 
 jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
 jhey_attack_angles %>%
@@ -376,7 +376,7 @@ jhey_attack_angles %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Jason Heyward")
-write_rds(jhey_attack_angles, "public_data/jhey_attack_angles")
+write_rds(jhey_attack_angles, "public_data/jhey_attack_angles.rds")
 
 jgallo_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jgallo, jgallo$attack_angle)
 jgallo_attack_angles %>%
