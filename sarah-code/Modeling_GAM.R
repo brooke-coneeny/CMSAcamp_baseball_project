@@ -288,4 +288,6 @@ final_woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data
                          method = "REML")
 gam.check(final_woba_model2, k.sample = 50000, k.rep = 250)
 
+write_rds(final_woba_model2, "public_data/woba_model")
+
   

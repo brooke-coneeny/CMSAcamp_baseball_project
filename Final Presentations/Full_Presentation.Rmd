@@ -22,12 +22,36 @@ library(xaringanthemer)
 style_mono_accent(base_color = "#cc002b")
 ```
 
-# Motivation
+## Motivation
 
 - Two of the most popular stats in the MLB have recently been launch angle and exit velocity 
-  - We wondered: can we prescribe a woba maximizing launch angle for an individual player 
+
+  - We wondered: can we prescribe a wOBA maximizing launch angle for an individual player 
   based on their power profile?
-```{r, include=FALSE}
+--
+
+## First, a few definitions: 
+
+- **wOBA** stands for weighted on base percentage.
+  - We are only looking at batted balls (meaning no walks or hit-by-pitches) in this project, because that is what we have launch angle and exit velocity data on.
+    - Each of the types of batted balls (out, single, double, triple, homers) are given a value - 0, 0.9, 1.25, 1.6, 2 - respectively
+
+- **Launch angle** means the vertical angle that the ball leaves a player’s bat after making contact. 
+
+- **Exit velocity** measures the speed (in mph) the ball comes off the bat. 
+
+---
+# Data
+
+- The majority of our analysis uses 2019 MLB data from Baseball Savant
+
+- Variables
+  - Focus on modeling **wOBA** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the exploratory process include **battter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+
+- Data is structured on a pitch-by-pitch basis
+```{r out.width='20%', echo = FALSE, fig.align='center'}
 library(baseballr)
 library(tidyverse)
 library(mgcv)
@@ -36,6 +60,15 @@ batter_all_2019 <- read_rds("../private_data/all2019data.rds")
 batter_all_2021 <- read_rds("../private_data/all2021data.rds")
 batter_all <- rbind(batter_all_2019, batter_all_2020, batter_all_2021)
 
+data_example <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  rename(`player` = player_name, `exit velocity` = launch_speed, `launch angle` = launch_angle, wOBA = woba_value, outcome = events) %>%
+  select(player, `exit velocity`, `launch angle`, wOBA, outcome)
+knitr::kable(head(data_example), format = 'html')
+```
+---
+## Hitters with high exit velocities have the ability to perform significantly better at launch angles in the mid 20s   
+```{r, include=FALSE}
 #get all balls in play  
 in_play <- batter_all %>%
   filter(description == "hit_into_play") %>%
@@ -102,29 +135,12 @@ wOBA_angle_velo_graph_2
 wOBA_angle_velo_graph_3
 ```
 ]
-
----
-# Data
-
-- Most of our EDA graphs use 2019 MLB data, the last 162 game season
-- Data is taken from Statcast on Baseball Savant
-- Variables
-  - We are interested in modeling **woba** using **launch angle** and **exit velocity**
-  - Other relevant variables we looked at during the EDA process include **battter handedness, 
-  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
-  
-```{r out.width='30%', echo = FALSE, fig.align='center'}
-data_example <- batter_all_2019 %>%
-  filter(description == "hit_into_play") %>%
-  rename(`player` = player_name, `exit velocity` = launch_speed, `launch angle` = launch_angle, wOBA = woba_value, outcome = events) %>%
-  select(player, `exit velocity`, `launch angle`, wOBA, outcome)
-knitr::kable(head(data_example), format = 'html')
-```
 ---
 # Hit outcome by launch angle and exit velocity 
 
 ```{r, fig.width = 14, fig.height = 7, echo = FALSE, fig.align='center'}
 library(nationalparkcolors)
+library(ggtext)
 pal2 <- park_palette("Everglades")
 
 batter_all_2019 %>%
@@ -146,7 +162,9 @@ batter_all_2019 %>%
   labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
   theme_minimal() +
   theme(panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank())
+        panel.grid.minor.y = element_blank(), 
+        legend.title = element_text(size=8), 
+        legend.text = element_text(size=10))
 ```
 ---
 #Breaking down the previous graph proportionally...
@@ -535,7 +553,282 @@ knitr::kable(head(result_trout), format = 'html')
 - Our model agrees that Mike Trout should not change his launch angle. 
   - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
 ]
+
 ---
+# Using a player's attack angle to predict launch angles
+
+- A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
+
+- The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+
+.pull-left[
+```{r, fig.height = 3, fig.width = 5, echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg")
+```
+]
+.pull-right[
+```{r, fig.height = 3, fig.width = 5, echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png")
+```
+]
+
+---
+# Adjusting attack angle to visualize change in wOBA
+
+- When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
+
+- Exit velocties were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+
+-This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+
+.pull-left[
+```{r, echo=FALSE, fig.height = 4, fig.width = 6}
+clean_edges <- function (data){
+  for(i in 1:length(data$launch_angle)){
+    if(data$launch_angle[i] < (mean(data$launch_angle)-2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)-2*sd(data$launch_angle))
+    }
+    else if(data$launch_angle[i] > (mean(data$launch_angle)+2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)+2*sd(data$launch_angle))
+    }
+    else{
+      data$cleaned_launch_angle[i]<-data$launch_angle[i]
+    }
+  }
+  return (data)
+}
+
+batter_all_2019hp <- batter_all_2019 %>%
+  filter(description == "hit_into_play")
+batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
+  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
+  summarize(attack_angle = median(launch_angle)) %>%
+  right_join(batter_all_2019hp, by = c("player_name"))
+
+predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
+
+mtrout <- batter_all_2019hp %>%
+  filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
+  clean_edges()
+
+test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
+    
+    # Initialize vectors for results
+    original_attack <- c(rep(orig_attack[1], times=31))
+    original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
+    possible_attack_vec <- c(0:30)
+    predicted_woba <- c()
+    avg_predicted_woba <- c()
+    
+    for(possible_attack in 0:30){
+        # Repeat 10 times
+        for(n in 1:10){
+          EV_vector4 <- vector()    # To hold launch speeds for this function
+          
+          # Find the possible launch angle for this attack angle
+          player_data$attack_angle <- possible_attack
+          pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
+          pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                              sd = sigma(LA_model)), 
+                                                launch_angle = lm.preds + noise)
+      
+          for(i in 1:length(pred_angles$launch_angle)){
+            # Sample a launch speed around their actual attack angle
+            hits_at_angle <- player_data %>% 
+              filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                       orig_attack-3 & !is.na(launch_speed))
+            # Randomly sample 1 exit velocity form similar hits
+            EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+            pred_EV <- hits_at_angle[EV_sample_index,] 
+            # Add that launch speed to vector as the predicted launch speed 
+            EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+          }
+          
+          # Create modeled data for this attack angle
+          modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+          preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+          xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+          
+          predicted_woba <- c(predicted_woba, xwOBA)
+        }
+      avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+    }
+    return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                   original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
+}
+
+mtrout_attack_angles <- test_all_attack(woba_model2, predicted_LA, mtrout, mtrout$attack_angle)
+mtrout_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Mike Trout")
+```
+
+]
+
+.pull-right[
+```{r, echo=FALSE, fig.height = 4, fig.width = 6}
+jhey <- batter_all_2019hp %>%
+  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
+jhey_attack_angles <- test_all_attack(woba_model2, predicted_LA, jhey, jhey$attack_angle)
+jhey_attack_angles %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  geom_vline(xintercept = jhey$attack_angle, color="red", linetype = "dashed")+
+  theme_bw()+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
+```
+]
+
+---
+# Looking forward to the effects on K% rate
+
+- Sure, we can tell a player to increase or decrease their attack angle - but often times hitting with a steeper attack angle can be correlated with a higher strikeout rate, as seen in the graphs below. 
+
+- Additionally, we see a higher correlation between **attack angle and K%** (0.313) than **launch angle and K%** (0.179). 
+
+  - This further supports our reasoning to make recommendations for a players based on their **attack angle**, rather than **average launch angle**. 
+
+.pull-left[
+```{r, echo=FALSE, fig.width=6, fig.height = 4}
+batter_all_2016 <- read_rds("../private_data/all2016data.rds")
+batter_all_2017 <- read_rds("../private_data/all2017data.rds")
+batter_all_2018 <- read_rds("../private_data/all2018data.rds")
+batter_all_2019 <- read_rds("../private_data/all2019data.rds")
+batter_all_2020 <- read_rds("../private_data/all2020data.rds")
+batter_all_2021 <- read_rds("../private_data/all2021data.rds")
+
+batter_all_2016 <- batter_all_2016 %>%
+  mutate(year = "2016")
+batter_all_2017 <- batter_all_2017 %>%
+  mutate(year = "2017")
+batter_all_2018 <- batter_all_2018 %>%
+  mutate(year = "2018")
+batter_all_2019 <- batter_all_2019 %>%
+  mutate(year = "2019")
+batter_all_2020 <- batter_all_2020 %>%
+  mutate(year = "2020")
+batter_all_2021 <- batter_all_2021 %>%
+  mutate(year = "2021")
+
+batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
+                             batter_all_2019, batter_all_2020, batter_all_2021)
+
+attack_angles <- batter_all_1621 %>%
+  filter(description == "hit_into_play") %>%
+  group_by(player_name, year) %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
+  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
+  summarize(attack_angle = median(launch_angle))
+
+#find each player's launch angle in each season
+launch_angles <- batter_all_1621 %>%
+  filter(description == "hit_into_play") %>%
+  group_by(player_name, year) %>% 
+  filter(launch_speed <= 120)%>%
+  summarize(avg_launch_angle = mean(launch_angle, na.rm = TRUE))
+
+#find each player's number of plate appearances
+plate_appearances <- batter_all_1621 %>%
+  mutate(PA_id = paste(game_pk, at_bat_number, sep = "-")) %>%
+  group_by(player_name, year) %>%
+    summarise(n_pa = length(unique(PA_id)))
+
+#find number of batted balls for each player
+batted_balls <- batter_all_1621 %>%
+  group_by(player_name, year) %>%
+  filter(description == "hit_into_play") %>%
+  count() %>%
+  rename(balls_in_play = n)
+
+#find each player's number of strikeouts
+strikeouts <- batter_all_1621 %>%
+  group_by(player_name, year) %>%
+  filter(events %in% c("strikeout", "strikeout_double_play")) %>%
+  count() %>%
+  rename(K=n)
+
+#find each player's wOBA each season
+wOBAs <-  batter_all_1621 %>%
+  group_by(player_name, year) %>%
+  summarize(woba = mean(woba_value, na.rm = TRUE))
+
+#create joined data set
+strikeout_eda <- plate_appearances %>%
+  left_join(strikeouts, by = c("player_name", "year")) %>%
+  left_join(attack_angles, by=c("player_name", "year")) %>%
+  left_join(launch_angles, by=c("player_name", "year")) %>%
+  left_join(wOBAs, by = c("player_name", "year")) %>%
+  left_join(batted_balls, by = c("player_name", "year")) %>%
+  #rename(PA = n.x, K = n.y) %>%
+  mutate(k_percent = K/n_pa) %>%
+  filter(balls_in_play >=50)
+
+# create plot of launch angle versus strikeout percentage and plot of attack angle versus 
+#strikeout percentage -------------------------------------------------------
+strikeout_eda %>%
+  ggplot(aes(x=avg_launch_angle, y=k_percent)) +
+  geom_point()+
+  geom_smooth()+
+  labs(x = "launch angle", y="K%")+
+  theme_minimal()
+#cor(strikeout_eda$avg_launch_angle, strikeout_eda$k_percent)
+```
+]
+.pull-right[
+```{r, , echo=FALSE, fig.width=6, fig.height = 4}
+strikeout_eda %>%
+  ggplot(aes(x=attack_angle, y=k_percent)) +
+  geom_point()+
+  geom_smooth()+
+  labs(x = "attack angle", y="K%")+
+  theme_minimal()
+#cor(strikeout_eda$attack_angle, strikeout_eda$k_percent)
+```
+]
+---
+
+## Not only should we look at attack angle versus K%, but also the impact of **changing** attack angle on K%
+```{r, fig.width = 14, fig.height = 6, echo = FALSE, fig.align='center'}
+strikeout_eda %>%
+  group_by(player_name) %>%
+  mutate(n_seasons = n()) %>%
+  ungroup() %>%
+  filter(n_seasons >= 4) %>%
+  group_by(player_name) %>%
+  summarize(attack_range = max(attack_angle) - min(attack_angle), 
+            k_range = k_percent[which.max(attack_angle)] - k_percent[which.min(attack_angle)]) %>%
+  ggplot(aes(x=attack_range, y=k_range))+
+  labs(x="Max - min attack angle", y="K% at max - min attack angle")+
+  geom_point()+
+  geom_smooth()+
+  theme_minimal()
+```
+
+---
+### Next Steps: for the long term we are interested in...
+
+- Better quantifying the relationship between attack angle and strikeout percentage
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg")
+```
 
 ```{r}
 #Slide for Adam's way and the issues there (doens't include pitch information)
@@ -544,5 +837,6 @@ knitr::kable(head(result_trout), format = 'html')
 #Final slides to wrap up other considerations (swinging differently means what you're pitched changes,
   #what are the mental implications of changing a hitter's swing, if the woba change isn't "worth it"
   #there might not be a reason to change the hitter's swing)
+#fix mental game image and update steps to include ^^ that stuff
 ```
 
