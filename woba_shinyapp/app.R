@@ -256,15 +256,18 @@ test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
   
 }
 
-ui <- fluidPage(textInput(inputId = "player_name", 
+ui <- fluidPage(selectizeInput(inputId = "player_name", 
                           label = "Name:", 
-                          value = "", 
-                          placeholder = "Heyward, Jason"),
-                submitButton(text = "Model predicted wOBA!"),
+                          choices = unique(batter_all_2019hp$player_name), 
+                          selected = unique(batter_all_2019hp$player_name[1])),
+                actionButton(inputId = "get_predictions",
+                               label = "Model predicted wOBA!"),
                 plotOutput(outputId = "wOBAplot")
 )
 
 server <- function(input, output) {
+  
+  player_attack_angles <- NULL
   
   player_data <- reactive(batter_all_2019hp %>%
   filter(player_name == input$player_name & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
@@ -272,13 +275,21 @@ server <- function(input, output) {
   
   player_woba <- reactive(mean(player_data()$woba_value, na.rm = TRUE))
   
-  player_attack_angles <- reactive(test_all_attack(final_woba_model2, predicted_LA, 
-                                                   player_data(), player_data()$attack_angle))
+  observeEvent(input$get_predictions, {
+    player_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, 
+                                                   player_data(), player_data()$attack_angle)
+  })
   
-  output$wOBAplot <- renderPlot(
-      ggplot(player_attack_angles(), aes(x = possible_attack, y = predicted_woba)) +
-      geom_line()+
-      geom_smooth()
+  output$wOBAplot <- renderPlot({
+    base_plot <- ggplot()
+    if(!is.null(player_attack_angles)){
+      base_plot <- base_plot + geom_line(data=player_attack_angles, 
+                                         aes(x = possible_attack, y = predicted_woba))+
+        geom_smooth(data=player_attack_angles, 
+                    aes(x = possible_attack, y = predicted_woba))
+    }
+    base_plot
+  }
   )
 }
 shinyApp(ui=ui, server = server)
