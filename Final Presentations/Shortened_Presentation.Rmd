@@ -320,6 +320,33 @@ knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/u
 
 .pull-left[
 ```{r, echo=FALSE, fig.height='40%'}
+clean_edges <- function (data){
+  for(i in 1:length(data$launch_angle)){
+    if(data$launch_angle[i] < (mean(data$launch_angle)-2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)-2*sd(data$launch_angle))
+    }
+    else if(data$launch_angle[i] > (mean(data$launch_angle)+2*sd(data$launch_angle))){
+      data$cleaned_launch_angle[i] <- (mean(data$launch_angle)+2*sd(data$launch_angle))
+    }
+    else{
+      data$cleaned_launch_angle[i]<-data$launch_angle[i]
+    }
+  }
+  return (data)
+}
+
+batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
+  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
+  summarize(attack_angle = median(launch_angle)) %>%
+  right_join(batter_all_2019hp, by = c("player_name"))
+
+predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
+
+mtrout <- batter_all_2019hp %>%
+  filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
+  clean_edges()
+
 test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
     
     # Initialize vectors for results
@@ -377,13 +404,15 @@ mtrout_attack_angles %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
-
 ```
 
 ]
 
 .pull-right[
 ```{r, echo=FALSE, fig.height='40%'}
+jhey <- batter_all_2019hp %>%
+  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
 jhey_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
