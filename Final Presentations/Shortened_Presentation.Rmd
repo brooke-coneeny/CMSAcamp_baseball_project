@@ -400,7 +400,6 @@ mtrout_attack_angles %>%
   geom_line()+
   geom_smooth()+
   geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
-  theme_bw()+
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
