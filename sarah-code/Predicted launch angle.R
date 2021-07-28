@@ -57,6 +57,7 @@ hist(batter_all_2019hp$plate_z)
 
 # The model we are sticking with
 predicted_LA <- lm(launch_angle ~ attack_angle + plate_z, data=batter_all_2019hp)
+write_rds(predicted_LA, "public_data/LA_model")
 summary(predicted_LA)
 library(ggfortify)
 autoplot(predicted_LA)
@@ -69,8 +70,7 @@ gam.check(predicted_LA3) #worse but might need a higher k?
 
 # Final wOBA Model -------------------------------------------------------------
 
-final_woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019hp, 
-                         method = "REML")
+final_woba_model2 <- read_rds("public_data/woba_model")
 
 
 # Update attack angle -----------------------------------------------------
@@ -359,16 +359,24 @@ mtrout_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
   geom_line()+
   geom_smooth()+
+  theme_bw()+
   geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
+write_rds(mtrout_attack_angles, "public_data/mtrout_attack_angles")
 
 jhey_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jhey, jhey$attack_angle)
 jhey_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
   geom_line()+
-  geom_smooth()
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = jhey$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
+write_rds(jhey_attack_angles, "public_data/jhey_attack_angles")
 
 jgallo_attack_angles <- test_all_attack(final_woba_model2, predicted_LA, jgallo, jgallo$attack_angle)
 jgallo_attack_angles %>%
