@@ -1,5 +1,5 @@
 ---
-title: "Maximzing WOBA with Launch Angle and Exit Velocity"
+title: "Maximizing wOBA with Launch Angle and Exit Velocity"
 author: "Sarah Sult, Brooke Coneeny, Erin Franke"
 date: '`r Sys.Date()`'
 output:
@@ -41,15 +41,13 @@ style_mono_accent(base_color = "#cc002b")
 - **Exit velocity** measures the speed (in mph) the ball comes off the bat. 
 
 ---
-# Data
+## Data
 
 - The majority of our analysis uses 2019 MLB data from Baseball Savant
-
 - Variables
   - Focus on modeling **wOBA** using **launch angle** and **exit velocity**
-  - Other relevant variables we looked at during the exploratory process include **battter handedness, 
+  - Other relevant variables we looked at during the exploratory process include **batter handedness, 
   pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
-
 - Data is structured on a pitch-by-pitch basis
 ```{r out.width='20%', echo = FALSE, fig.align='center'}
 library(baseballr)
@@ -57,6 +55,8 @@ library(tidyverse)
 library(mgcv)
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
+batter_all_2019hp <- batter_all_2019 %>%
+  filter(description == "hit_into_play")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
 batter_all <- rbind(batter_all_2019, batter_all_2020, batter_all_2021)
 
@@ -534,17 +534,7 @@ trout_density_2019
 .pull-right[
 **Our model's output...**
 ```{r, echo=FALSE}
-mike_trout <- batter_all_2019 %>%
-  filter(player_name == "Trout, Mike", description == "hit_into_play",
-         !is.na(launch_angle), !is.na(launch_speed)) 
-
-result_trout <- changing_launch_angle(mike_trout, woba_model2, 0)
-result_trout <- result_trout %>% 
-  add_column(`true wOBA` = round(mean(mike_trout$woba_value), 3)) %>%
-  add_column(`true LA` = round(mean(mike_trout$launch_angle), 0))
-result_trout <- result_trout %>% 
-  select(`true wOBA`, `predicted wOBA`, `true LA`, `recommended LA`, `degrees change`)
-
+result_trout <- read_rds("public_data/changing_LA_trout.rds")
 knitr::kable(head(result_trout), format = 'html')
 ```
 
@@ -553,31 +543,86 @@ knitr::kable(head(result_trout), format = 'html')
 ]
 
 ---
-# Using a player's attack angle to predict launch angles
-
+## Using a player's attack angle to predict launch angles
+.pull-left[
 - A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
 
 - The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
 
 - We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+]
 
-.pull-left[
-```{r, fig.height = 3, fig.width = 5, echo = FALSE, fig.align='center'}
+.pull-right[
+```{r out.width='60%', out.height='45%', echo = FALSE, fig.align='center'}
 knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg")
 ```
-]
-.pull-right[
-```{r, fig.height = 3, fig.width = 5, echo = FALSE, fig.align='center'}
+
+```{r out.width='60%', out.height='45%', echo = FALSE, fig.align='center'}
 knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png")
 ```
 ]
 
 ---
-# Adjusting attack angle to visualize change in wOBA
+## Using joint probabilities to maximize wOBA by changing attack angle 
+
+- We used a skew-normal to represent an exit velocity distribution and a beta distribution with the parameter of attack angle. 
+
+.pull-left[
+  - Multiplying these two gives us density over all possible launch angle and exit velocity combinations
+]
+.pull-right[
+```{r, fig.height = 3, fig.width = 5, echo = FALSE, fig.align='center'}
+var_range <- expand.grid(launch_speed = 30:125,
+                 launch_angle = -75:75)
+
+player = 'Trout, Mike'
+
+# Gets rid of what we assume to be bad measurements
+batter_all_2019hp_good <- batter_all_2019hp %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
+  filter(player_name == player)
+
+# Creating a skew normal dist of launch speed
+launch_speed_skew_norm <- sn::selm(launch_speed ~ 1, data = batter_all_2019hp %>% 
+                                     filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
+                                     filter(player_name == player), method = "MPLE")
+
+# Calculates the presumed attack angle of the batter (median angle of the top 10% hardest hit balls)
+attack_angle <- median((batter_all_2019hp %>% 
+                          filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>% 
+                          filter(player_name == player) %>% 
+                          filter(launch_speed >= quantile(launch_speed, .9)))$launch_angle)
+
+la_dist <- function(ev, la, attack, n = 100000) {
+  w <- sn::psn(ev, launch_speed_skew_norm@param$dp[1],launch_speed_skew_norm@param$dp[2],
+               launch_speed_skew_norm@param$dp[3])^2
+  w = (exp(w)/(100 + exp(w)))^2.2
+  #(la+75)/150 puts all launch angles between 0 and 1
+  dbeta((la + 75)/150, 1 + w * n * (attack + 75)/150, 1 + w * n - w * (n * (attack + 75)/150))
+}
+
+ggplot() + 
+  geom_raster(data = var_range %>% 
+                mutate(d = sn::dsn(launch_speed,launch_speed_skew_norm@param$dp[1],
+                                   launch_speed_skew_norm@param$dp[2],launch_speed_skew_norm@param$dp[3]) *
+                         la_dist(launch_speed, launch_angle, attack_angle)), 
+              #d is p(ev, la) ~ skew_normal(ev, empricially det.) * beta(la between -75 and +75, ad hockery to decay with lower EVs, and mode determined by attack angle)
+              aes(launch_angle, launch_speed, fill = d)) +
+  scale_fill_gradientn(colours = rainbow(7)) +
+  geom_vline(xintercept = 0) + coord_cartesian(expand = F)+
+  labs(y="exit velocity", x="launch angle", title = "Mike Trout")
+```
+]
+
+- Using this density we can randomly sample points to create a mock dataset of a player's hit-into-play balls for the season. 
+  - We can find the wOBA for this dataset and adjust the attack angle as needed to find a maximum wOBA. 
+---
+
+## Adding in pitch height to find a maximum wOBA over different attack angles
 
 - When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
-- Exit velocties were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+- Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
 
 -This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
@@ -598,66 +643,11 @@ clean_edges <- function (data){
   return (data)
 }
 
-batter_all_2019hp <- batter_all_2019 %>%
-  filter(description == "hit_into_play")
-batter_all_2019hp <- batter_all_2019hp %>% group_by(player_name) %>% 
-  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
-  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
-  summarize(attack_angle = median(launch_angle)) %>%
-  right_join(batter_all_2019hp, by = c("player_name"))
-
 predicted_LA <- read_rds("public_data/LA_model.rds")
 
 mtrout <- batter_all_2019hp %>%
   filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
   clean_edges()
-
-# test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
-#     
-#     # Initialize vectors for results
-#     original_attack <- c(rep(orig_attack[1], times=31))
-#     original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
-#     possible_attack_vec <- c(0:30)
-#     predicted_woba <- c()
-#     avg_predicted_woba <- c()
-#     
-#     for(possible_attack in 0:30){
-#         # Repeat 10 times
-#         for(n in 1:10){
-#           EV_vector4 <- vector()    # To hold launch speeds for this function
-#           
-#           # Find the possible launch angle for this attack angle
-#           player_data$attack_angle <- possible_attack
-#           pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
-#           pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
-#                                                               sd = sigma(LA_model)), 
-#                                                 launch_angle = lm.preds + noise)
-#       
-#           for(i in 1:length(pred_angles$launch_angle)){
-#             # Sample a launch speed around their actual attack angle
-#             hits_at_angle <- player_data %>% 
-#               filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
-#                        orig_attack-3 & !is.na(launch_speed))
-#             # Randomly sample 1 exit velocity form similar hits
-#             EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
-#             pred_EV <- hits_at_angle[EV_sample_index,] 
-#             # Add that launch speed to vector as the predicted launch speed 
-#             EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
-#           }
-#           
-#           # Create modeled data for this attack angle
-#           modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
-#           preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
-#           xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
-#           
-#           predicted_woba <- c(predicted_woba, xwOBA)
-#         }
-#       avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
-#     }
-#     return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
-#                    original_woba = original_woba, predicted_woba = avg_predicted_woba))
-#   
-# }
 
 mtrout_attack_angles <- read_rds("public_data/mtrout_attack_angles.rds")
 mtrout_attack_angles %>%
@@ -677,7 +667,9 @@ mtrout_attack_angles %>%
 jhey <- batter_all_2019hp %>%
   filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
   clean_edges()
+
 jhey_attack_angles <- read_rds("jhey_attack_angles.rds")
+
 jhey_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
   geom_line()+

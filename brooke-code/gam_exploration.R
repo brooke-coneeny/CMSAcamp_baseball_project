@@ -82,6 +82,8 @@ changing_launch_angle <- function(player_data, woba_model, net_change) {
   }
 }
 
+
+
 #test on real players
 mike_trout <- batter_all_2019 %>%
   filter(player_name == "Trout, Mike", description == "hit_into_play",

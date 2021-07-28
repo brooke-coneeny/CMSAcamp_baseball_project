@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>Maximzing WOBA with Launch Angle and Exit Velocity</title>
+    <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-07-27" />
+    <meta name="date" content="2021-07-28" />
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
-# Maximzing WOBA with Launch Angle and Exit Velocity
+# Maximizing wOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-07-27
+### 2021-07-28
 
 ---
 
@@ -41,15 +41,13 @@ class: center, middle, inverse, title-slide
 - **Exit velocity** measures the speed (in mph) the ball comes off the bat. 
 
 ---
-# Data
+## Data
 
 - The majority of our analysis uses 2019 MLB data from Baseball Savant
-
 - Variables
   - Focus on modeling **wOBA** using **launch angle** and **exit velocity**
-  - Other relevant variables we looked at during the exploratory process include **battter handedness, 
+  - Other relevant variables we looked at during the exploratory process include **batter handedness, 
   pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
-
 - Data is structured on a pitch-by-pitch basis
   
 &lt;table&gt;
@@ -123,7 +121,7 @@ class: center, middle, inverse, title-slide
 ]
 
 ---
-# Hit outcome by launch angle and exit velocity 
+## Hit outcome by launch angle and exit velocity 
 
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-5-1.png" width="1008" style="display: block; margin: auto;" /&gt;
 ---
@@ -138,7 +136,7 @@ class: center, middle, inverse, title-slide
 ]
 
 ---
-# We created a GAM to model player wOBA predictions 
+## We created a GAM to model player wOBA predictions 
 
 .pull-left[
 - We fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
@@ -153,7 +151,7 @@ class: center, middle, inverse, title-slide
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-9-1.png" width="432" /&gt;
 ]
 ---
-## By using an interaction between launch angle and exit velocity in our GAM, we were able to capture the true distribution of wOBA, such as the band of singles and clump of home runs
+## By using an interaction between launch angle and exit velocity in our GAM, we capture the true distribution of wOBA
 .pull-left[
 **Actual relationship**
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-10-1.png" width="432" /&gt;
@@ -163,49 +161,49 @@ class: center, middle, inverse, title-slide
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-11-1.png" width="432" /&gt;
 ]
 ---
-# Using a player's attack angle to predict launch angles
+## Using a player's attack angle to predict launch angles
 
+.pull-left[
 - A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
 
 - The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
 
 - We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
-
-.pull-left[
-&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg" style="display: block; margin: auto;" /&gt;
 ]
 
 .pull-right[
-&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg" width="60%" height="45%" style="display: block; margin: auto;" /&gt;
+
+&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png" width="60%" height="45%" style="display: block; margin: auto;" /&gt;
 ]
 
 ---
-# Adjusting attack angle to visualize change in wOBA
+## Adjusting attack angle to visualize change in wOBA
 
 - When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
-- Exit velocties were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+- Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
 
--This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+- This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
 .pull-left[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-14-1.png" width="432" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-14-1.png" width="360" /&gt;
 
 ]
 
 .pull-right[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-15-1.png" width="432" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-15-1.png" width="360" /&gt;
 ]
 
 ---
-# Looking forward to the effects on K% rate
+## Looking forward to the effects on K% rate
 
-- Sure, we can tell a player to increase or decrease their launch angle - but often times recommending a steeper launch angle results in a higher strikeout rates as the bat spends less time in the heart of the zone
+- Sure, we can tell a player to increase or decrease their attack angle - but often times hitting with a steeper attack angle can be correlated with a higher strikeout rate, as seen in the graphs below. 
 
 - While we have not yet quantified it, the following graphs show trends that players with higher attack angles on average tend to have higher strikeout rates
 
 .pull-left[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-2.png" width="432" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;
 ]
 .pull-right[
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
@@ -217,9 +215,20 @@ class: center, middle, inverse, title-slide
 
 - Understanding and quantifying how hard it is for a player to change their launch angle 
 
-  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+  - Baseball is a mental game - are players' mental states negatively impacted when changing their swing? 
+  
+    - What wOBA increase is worth risking messing with a player's mental state? 
+  
+- If a player does change their attack angle pitchers will begin to pitch to them differently - our methods assume they are given the exact same set of pitches which is unrealistic. 
 
-&lt;img src="http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg" width="40%" style="display: block; margin: auto;" /&gt;
+&lt;img src="https://www.quoteambition.com/wp-content/uploads/2017/07/baseball-quotes-more.jpg" width="30%" style="display: block; margin: auto;" /&gt;
+---
+# Thank you! 
+
+If you would discuss this work further, please reach out to us: 
+  - Sarah Sult: sarahesult@gmail.com
+  - Brooke Coneeny: bconeen1@swarthmore.edu
+  - Erin Franke: efranke@macalester.edu
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
