@@ -4,7 +4,7 @@
     <title>Maximzing WOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-07-28" />
+    <meta name="date" content="2021-07-27" />
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -13,7 +13,7 @@ class: center, middle, inverse, title-slide
 
 # Maximzing WOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-07-28
+### 2021-07-27
 
 ---
 
@@ -153,7 +153,7 @@ class: center, middle, inverse, title-slide
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-9-1.png" width="432" /&gt;
 ]
 ---
-## By using an interaction between launch angle and exit velocity in our GAM, we capture the true distribution of wOBA
+## By using an interaction between launch angle and exit velocity in our GAM, we were able to capture the true distribution of wOBA, such as the band of singles and clump of home runs
 .pull-left[
 **Actual relationship**
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-10-1.png" width="432" /&gt;
@@ -165,17 +165,17 @@ class: center, middle, inverse, title-slide
 ---
 # Using a player's attack angle to predict launch angles
 
-.pull-left[
 - A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
 
 - The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
 
 - We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+
+.pull-left[
+&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg" style="display: block; margin: auto;" /&gt;
 ]
 
 .pull-right[
-&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg" style="display: block; margin: auto;" /&gt;
-
 &lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png" style="display: block; margin: auto;" /&gt;
 ]
 
@@ -184,17 +184,17 @@ class: center, middle, inverse, title-slide
 
 - When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
-- Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+- Exit velocties were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
 
-- This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+-This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
 .pull-left[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-14-1.png" width="360" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-14-1.png" width="432" /&gt;
 
 ]
 
 .pull-right[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-15-1.png" width="360" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-15-1.png" width="432" /&gt;
 ]
 
 ---
@@ -205,7 +205,7 @@ class: center, middle, inverse, title-slide
 - While we have not yet quantified it, the following graphs show trends that players with higher attack angles on average tend to have higher strikeout rates
 
 .pull-left[
-&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;
+&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;&lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-16-2.png" width="432" /&gt;
 ]
 .pull-right[
 &lt;img src="Shortened_Presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
