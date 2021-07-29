@@ -454,7 +454,6 @@ vis.gam(x=woba_model2,
 
 - The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
 
-- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
 ]
 
 .pull-right[
@@ -523,13 +522,15 @@ ggplot() +
   - We can find the wOBA for this dataset and adjust the attack angle as needed to find a maximum wOBA. 
 ---
 
-## Adding in pitch height to find a maximum wOBA over different attack angles
+### Adding in pitch height to find a maximum wOBA over different attack angles
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
 
 - When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
 - Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
 
--This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+- This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
 .pull-left[
 ```{r, echo=FALSE, fig.height = 3, fig.width = 5}
@@ -606,7 +607,7 @@ jhey_attack_angles %>%
   - This further supports our reasoning to make recommendations for a players based on their **attack angle**, rather than **average launch angle**. 
 
 .pull-left[
-```{r, echo=FALSE, fig.width=6, fig.height = 4}
+```{r, echo=FALSE, fig.width=5, fig.height = 3}
 batter_all_2016 <- read_rds("private_data/all2016data.rds")
 batter_all_2017 <- read_rds("private_data/all2017data.rds")
 batter_all_2018 <- read_rds("private_data/all2018data.rds")
@@ -692,7 +693,7 @@ strikeout_eda %>%
 ```
 ]
 .pull-right[
-```{r, , echo=FALSE, fig.width=6, fig.height = 4}
+```{r, , echo=FALSE, fig.width=5, fig.height = 3}
 strikeout_eda %>%
   ggplot(aes(x=attack_angle, y=k_percent)) +
   geom_point()+

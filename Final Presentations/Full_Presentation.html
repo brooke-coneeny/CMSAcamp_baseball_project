@@ -4,7 +4,7 @@
     <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-07-28" />
+    <meta name="date" content="2021-07-29" />
     <script src="Full_Presentation_files/header-attrs-2.8/header-attrs.js"></script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
@@ -14,7 +14,7 @@ class: center, middle, inverse, title-slide
 
 # Maximizing wOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-07-28
+### 2021-07-29
 
 ---
 
@@ -206,7 +206,6 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 
 - The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
 
-- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
 ]
 
 .pull-right[
@@ -231,13 +230,15 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
   - We can find the wOBA for this dataset and adjust the attack angle as needed to find a maximum wOBA. 
 ---
 
-## Adding in pitch height to find a maximum wOBA over different attack angles
+### Adding in pitch height to find a maximum wOBA over different attack angles
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
 
 - When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
 
 - Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
 
--This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+- This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
 .pull-left[
 &lt;img src="Full_Presentation_files/figure-html/unnamed-chunk-21-1.png" width="360" /&gt;
@@ -258,10 +259,10 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
   - This further supports our reasoning to make recommendations for a players based on their **attack angle**, rather than **average launch angle**. 
 
 .pull-left[
-&lt;img src="Full_Presentation_files/figure-html/unnamed-chunk-23-1.png" width="432" /&gt;
+&lt;img src="Full_Presentation_files/figure-html/unnamed-chunk-23-1.png" width="360" /&gt;
 ]
 .pull-right[
-&lt;img src="Full_Presentation_files/figure-html/unnamed-chunk-24-1.png" width="432" /&gt;
+&lt;img src="Full_Presentation_files/figure-html/unnamed-chunk-24-1.png" width="360" /&gt;
 ]
 ---
 
