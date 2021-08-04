@@ -1,3 +1,7 @@
+# PUROSE: to scrape data from baseball savant and write it to a private folder 
+# that we can access it from. We cannot upload these to Github because they exceed
+# the size limit! 
+
 #write 2017 data 
 
 ap171 <- scrape_statcast_savant_batter_all(start_date = "2017-04-02",

@@ -1,9 +1,10 @@
+## PURPOSE: create a logistic model for predicting whether a batted ball will be a hit
+# we did not end up using this model
+
 library(baseballr)
 library(tidyverse)
 library(mgcv)
 library(gratia)
-
-## GOAL: create a logistic model for predicting whether a batted ball will be a hit
 
 #load data ------------------------------------------------------------
 batter_all_2016 <- read_rds("private_data/all2016data.rds")
@@ -13,6 +14,8 @@ batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
+#create dataset of all hit into play balls for the 2016-2021 season. 
+#create a column indicated whether or not the batted ball was a hit 
 batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
                              batter_all_2019, batter_all_2020, batter_all_2021)
 batter_all_1621hp <- batter_all_1921 %>%
@@ -21,10 +24,11 @@ batter_all_1621hp <- batter_all_1921 %>%
   filter(!is.na(launch_angle), !is.na(launch_speed),
          !is.na(is_hit))
 
-#table of hits versus outs 
+#determine how many of all the batted balls were hits and how many were outs 
 table(batter_all_1621hp$is_hit)
 
-#scatterplot of hits versus outs 
+#create a scatterplot of launch angle on the x axis, exit velocity on the y. 
+# color by whether or not the batted ball was a hit. 
 batter_all_1621hp %>%
   ggplot(aes(x = launch_angle, 
              y = launch_speed,
@@ -37,28 +41,26 @@ batter_all_1621hp %>%
   theme_bw() +
   theme(legend.position = "bottom")
 
-## fitting the GAM ----------------------------------------------------
+## Fit an initial GAM ----------------------------------------------------
 
 #set up training data
 set.seed(2016)
 batter_all_1621hp <-batter_all_1621hp %>%
   mutate(is_train = sample(rep(0:1, length.out = nrow(batter_all_1621hp))))
 
-#initial function with smoothing 
+#initial function with smoothing. Does not include an interaction. 
 init_hit_gam <- gam(is_hit ~ s(launch_speed) + s(launch_angle), 
                       data = filter(batter_all_1621hp, is_train == 1), 
                       family = binomial, method = "REML")
-summary(init_hit_gam) #not a great R^2 :(
+summary(init_hit_gam) #not a great R^2 
 
-## visualizing the GAM ------------------------------------------------
+## visualizing the GAM 
 draw(init_hit_gam, fun = plogis, constant = coef(init_hit_gam)[1])
 
 ## use gam.check() to see if we need more basis functions -------------
-
 gam.check(init_hit_gam)
 
-## check predictions -------------------------------------------------
-
+## check predictions 
 batter_all_1621hp <- batter_all_1621hp %>%
   mutate(init_hit_gam_prob = 
            as.numeric(predict(init_hit_gam,
@@ -69,7 +71,7 @@ batter_all_1621hp %>%
   group_by(is_train) %>%
   summarize(correct = mean(is_hit == init_hit_gam_class))
 
-## try a model with an interaction ------------------------------------
+## GAM model with an interaction  ------------------------------------
 hit_gam_interact <- gam(is_hit ~ s(launch_angle, launch_speed), 
                        data = filter(batter_all_1621hp, is_train == 1), 
                        family = binomial)

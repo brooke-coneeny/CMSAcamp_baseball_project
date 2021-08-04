@@ -1,13 +1,16 @@
+## PURPOSE: to continue to explore the relationship between launch angle, exit velocity, 
+# and weighted on base percentage. 
+
+# Load libraries and data --------------------------------------------------
 library(baseballr)
 library(tidyverse)
 library(readr)
 
 player_wobas <- read_csv("public_data/woba_2021data.csv")
-
-### Loading data 
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
-#distribution of event by launch angle and exit velocity -------------------
+# Create scatterplot of launch angle vs. exit velocity. Color by the outcome
+# of the batted ball. This is where we first begin to see the J-shape of singles. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -24,8 +27,9 @@ batter_all_2021 %>%
   geom_point(alpha = 0.5) + 
   theme_minimal()
 
-# are there certain players that vary their launch angle more than others and does this impact woba?------------
-
+#Start to investigate the relationship of whether or not players with a greater 
+# standard deviation of their launch angle tend to have higher or lower wOBAs. 
+# We see that there does not appear to be a relationship. 
 player_abs <- batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   group_by(player_name) %>%
@@ -46,8 +50,10 @@ launch_spread %>%
     geom_point()+
   theme_minimal()
 
-#facet outcome plot by pitch type -----------------------------------------------------
-
+# Does hit outcome change holding everything constant but pitch type? Break pitch 
+# types into fastballs, offspeed pitches, and breaking balls. Then create the hit outcome
+# scatterplot like above and facet by pitch type. We do not seem to see a difference.
+# This is likely because we are conditioning on the ball being hit. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -73,7 +79,10 @@ batter_all_2021 %>%
   facet_wrap(~pitch_group, ncol = 1)+
   theme_minimal()
 
-#hows does hit distance correlate with launch angle?----------
+#Do players hit the ball further at certain launch angles? Create a scatterplot 
+# with launch angle on the x axis and hit distance on the y. Color by hit outcome. 
+# Pretty much as expected, this is a parabola with balls being hit furthest at a 
+# launch angle of around 25-30 (homeruns). 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -89,9 +98,10 @@ batter_all_2021 %>%
   geom_jitter()+
   theme_minimal()
   
-#should launch angle change depending on fielder alignment?
-
-#main graph (no alignment specifications)
+# From the graph above we saw that homeruns really only tend to occur in 20ish degree 
+# span of launch angle from around 20-40. Let's break launch angle into 10 degree 
+# categories from -90 to 90 and have and show the distribution of hit outcomes in 
+# each category. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -111,7 +121,11 @@ batter_all_2021 %>%
       geom_bar(position = "fill")+
   theme_minimal()
 
-#filter to make bar graph with launch angle between -20 and 50
+# We'd never recommend a launch angle on the ends of this distribution above, so lets 
+# make the bound -20 and 50 degrees and break the launch angle into groups of 5 degrees. 
+# Something to notice is how the 10-15 degree launch angle appears to be about 70% base 
+# hits, far above the major league average in 2021 of around .250! The most homeruns 
+# come with a launch angle around 30-35 degrees. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -133,7 +147,9 @@ batter_all_2021 %>%
   geom_bar(position = "fill")+
   theme_minimal()
 
-#facet by lefty vs righty
+#Is there any difference in this distribution when we facet by a lefty hitter vs 
+#righty pitcher, lefty hitter versus lefty pitcher, etc? Again, there do not appear 
+# to be any significant differences based on this graph. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -156,7 +172,8 @@ batter_all_2021 %>%
   facet_wrap(~p_throws + stand, ncol = 2)+
   theme_minimal()
 
-#facet by alignment...doesn't appear so
+#Does hit outcome change holding everything constant but fielding alignment? 
+# It does not appear so. 
 batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(

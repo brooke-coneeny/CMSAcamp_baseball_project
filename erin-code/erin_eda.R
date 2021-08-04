@@ -1,19 +1,17 @@
-#erin's folder test
+# PURPOSE: EDA to explore the relationship between launch angle, exit velocity, and
+# wOBA. Will explore with 2021 data. 
 
-#baseballr package info: http://billpetti.github.io/baseballr/
-#variable meanings: https://app.box.com/v/statcast-pitchfx-glossary-pett
-
-#load packages
+#load packages and data
 library(baseballr)
 library(data.table)
 library(tidyverse)
 library(ff)
 
-batter_all_2021 <- read_rds("data/all2021data.rds")
+batter_all_2021 <- read_rds("private_data/all2021data.rds")
 ---------------------------------------------------------------------------------
 
-#removed sac bunts from "out" because they do not count as an at bat and therefore not part
-# of the woba denominator
+#create a table with the number of batted balls each player has hit to the categories
+# of out, single, double, triple, homerun
 batter_hits <- batter_all_2021 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -32,6 +30,9 @@ batter_hits <- batter_all_2021 %>%
 
 batter_hits[is.na(batter_hits)] = 0
 
+#update batter hits to include total number of batted balls and an in-play wOBA 
+#using a calculation from online. **Eventually, we found there to be a `woba_value` 
+#column in the dataset and did not end up using this. 
 batter_hits <- batter_hits %>%
   mutate(total_balls_in_play = double + home_run + out + single + triple) %>%
   mutate(in_play_woba = (single*0.882 + double*1.242 + triple*1.586 + home_run*2.039)/total_balls_in_play) %>%
@@ -45,7 +46,9 @@ max_exit_velos <- batter_all_2021 %>%
   left_join(batter_all_2021, by = c("player_name", "max_EV" = "launch_speed")) %>%
   select(player_name, max_EV, launch_angle)
 
-#join with batter hits in order to create woba graph, color by exit velocity
+#join with batter hits in order to create woba graph, color by exit velocity.
+# This graph ended up looking strange and not like we intended. We were able to figure
+# out the proper code, which is located in the Final EDA script. 
 batter_hits %>%
   left_join(max_exit_velos, by = "player_name") %>%
   select(player_name:max_EV, launch_angle) %>%

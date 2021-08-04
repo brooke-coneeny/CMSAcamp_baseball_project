@@ -1,3 +1,6 @@
+#PURPOSE: create density plots for a few players to investigate their relationships
+#between launch angle, exit velocity, and wOBA. 
+
 library(tidyverse)
 
 # Loading Data ------------------------------------------------------------
