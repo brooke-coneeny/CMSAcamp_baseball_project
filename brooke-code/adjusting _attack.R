@@ -20,9 +20,11 @@ batter_all_2019 <- batter_all_2019 %>% #creating column with corresponding attac
 # Our GAM Model which predicts woba value 
 woba_model_interaction <- gam(woba_value ~ s(launch_speed, launch_angle, k = 200), 
                               data = batter_all_2019, method = "REML")
+woba_model_interaction <- read_rds("public_data/woba_model.rds")
 
 # Our linear model which predicts launch angles 
 predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data = batter_all_2019)
+predicted_LA <- read_rds("public_data/LA_model.rds")
 
 #########################################################################################################################
 
@@ -256,44 +258,48 @@ repeat_adjust_attack(jhey, jhey_woba)
 ##   orig_attack: the original attack angle the batter is swinging at 
 ### Return: returns a tibble with the different attack angles and their corresponding woba values 
 
-woba_values <- vector() #vector of predicted woba values 
-attack_degrees <- vector() #vector holding different attack angles
-
 adjust_attack_range <- function(woba_model, LA_model, player_data, orig_attack) {
+  avg_woba_values <- vector() #vector of final predicted woba values 
+  predicted_woba_per_attack <- vector() #vector of woba values all at same attack angle 
+  attack_degrees <- c(0:30) #vector holding different attack angles
   
   # Look at all different attack angles 
   for (possible_attack in 0:30) {
-    # Vector for exit velocities
-    EV_vector4 <- vector()
+    for (n in 1:10) {
+      # Vector for exit velocities
+      EV_vector4 <- vector()
+      
+      # Change in attack angle
+      change_attack_data <- player_data
+      change_attack_data$attack_angle <- possible_attack
+      
+      # Model the predicted angles given the new  attack angle
+      pred_angles4 <- tibble(lm.preds = predict(LA_model, newdata = change_attack_data))
+      
+      # Creating an rnorm with the standard deviation of the residuals to create noise
+      pred_angles4 <- pred_angles4 %>% mutate(noise = rnorm(n = length(pred_angles4$lm.preds), 
+                                                            mean = 0, sd = sigma(LA_model)),launch_angle = lm.preds + noise)
+      
+      # Use sampling to find a corresponding exit velocity for predicted launch angles
+      EV_vector4 <- sampling(pred_angles4, player_data, EV_vector4, orig_attack)
     
-    # Change in attack angle
-    change_attack_data <- player_data
-    change_attack_data$attack_angle <- possible_attack
-    attack_degrees <- c(attack_degrees, possible_attack)
-    
-    # Model the predicted angles given the new  attack angle
-    pred_angles4 <- tibble(lm.preds = predict(LA_model, newdata = change_attack_data))
-    
-    # Creating an rnorm with the standard deviation of the residuals to create noise
-    pred_angles4 <- pred_angles4 %>% mutate(noise = rnorm(n = length(pred_angles4$lm.preds), 
-                                                          mean = 0, sd = sigma(LA_model)),launch_angle = lm.preds + noise)
-    
-    # Use sampling to find a corresponding exit velocity for predicted launch angles
-    EV_vector4 <- sampling(pred_angles4, player_data, EV_vector4, orig_attack)
-    
-    # Combine  predicted launch angles with predicted exit velocities into one tibble
-    modeled_data <- tibble(launch_angle = pred_angles4$launch_angle, launch_speed = EV_vector4)
-    
-    # Predicted woba values from predicted launch angles and exit velocities
-    preds4 <- tibble(gam.preds = predict(woba_model_interaction, newdata = modeled_data)) 
-    
-    # Find the mean expected woba value for the batter 
-    xwOBA <- mean(preds4$gam.preds, na.rm = TRUE)
+      # Combine  predicted launch angles with predicted exit velocities into one tibble
+      modeled_data <- tibble(launch_angle = pred_angles4$launch_angle, launch_speed = EV_vector4)
+      
+      # Predicted woba values from predicted launch angles and exit velocities
+      preds4 <- tibble(gam.preds = predict(woba_model_interaction, newdata = modeled_data)) 
+      
+      # Find the mean expected woba value for the batter 
+      xwOBA <- mean(preds4$gam.preds, na.rm = TRUE)
+      
+      # Add the mean expected woba to vector of all woba values at that attack 
+      predicted_woba_per_attack <- c(predicted_woba_per_attack, xwOBA)
+    }
     
     # Add the mean expected woba to vector of different woba values 
-    woba_values <- c(woba_values, xwOBA)
+    avg_woba_values <- c(avg_woba_values, mean(predicted_woba_per_attack))
   }
-  varying_woba <- tibble(attack_angle = attack_degrees, woba = woba_values)
+  varying_woba <- tibble(attack_angle = attack_degrees, woba = avg_woba_values)
   return(varying_woba)
 }
   
@@ -305,7 +311,13 @@ woba_values <- adjust_attack_range(woba_model_interaction, predicted_LA, mtrout,
 woba_plot <- woba_values %>%
   ggplot(aes(x = attack_angle, y = woba)) +
   geom_line() +
-  scale_x_continuous(breaks = seq(from = min(woba_values$attack_angle),to = max(woba_values$attack_angle), by = 1))
+  geom_smooth() +
+  scale_x_continuous(breaks = seq(from = 0,to = 30, by = 1)) +
+  theme_bw() +
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Mike Trout")
 
 # Testing out the plot on Jason Heyward
 woba_values_heyward <-  vector()
@@ -313,9 +325,14 @@ woba_values_heyward <- adjust_attack_range(woba_model_interaction, predicted_LA,
 
 woba_plot <- woba_values_heyward %>%
   ggplot(aes(x = attack_angle, y = woba)) +
-  #geom_line() +
+  geom_line() +
   geom_smooth() +
-  scale_x_continuous(breaks = seq(from = 0,to = 30, by = 1))
+  scale_x_continuous(breaks = seq(from = 0,to = 30, by = 1)) +
+  theme_bw() +
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
   
   
   
