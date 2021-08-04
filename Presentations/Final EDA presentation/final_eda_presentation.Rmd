@@ -1,0 +1,565 @@
+---
+title: "Maximzing WOBA with Launch Angle and Exit Velocity"
+author: "Sarah Sult, Brooke Coneeny, Erin Franke"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(fig.retina = 3, warning = FALSE, message = FALSE)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_mono_accent(base_color = "#cc002b")
+```
+
+# Motivation
+
+- Two of the most popular stats in the MLB have recently been launch angle and exit velocity 
+  - We wondered: can we prescribe a woba maximizing launch angle for an individual player 
+  based on their power profile?
+```{r, include=FALSE}
+library(baseballr)
+library(tidyverse)
+library(mgcv)
+batter_all_2020 <- read_rds("../private_data/all2020data.rds")
+batter_all_2019 <- read_rds("../private_data/all2019data.rds")
+batter_all_2021 <- read_rds("../private_data/all2021data.rds")
+batter_all <- rbind(batter_all_2019, batter_all_2020, batter_all_2021)
+
+#get all balls in play  
+in_play <- batter_all %>%
+  filter(description == "hit_into_play") %>%
+  select(launch_angle, woba_value, player_name, launch_speed) 
+
+#max EV per player and combine with balls in play (so there is a column categorizing the player who 
+  #hit the ball by their max EV in the season)
+max_EV_grouped2 <- batter_all %>%
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV < 200 & max_EV>0) %>%
+  right_join(in_play, by = c("player_name")) %>%
+  mutate(EV_group = cut(max_EV, breaks = c(0, 110, 150), 
+                        labels = c("<110 EV Hitters", "110+ EV Hitters")))
+
+#group by 3 EVs instead
+max_EV_grouped3 <- batter_all %>%
+  group_by(player_name) %>%
+  summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV < 200 & max_EV>0) %>%
+  right_join(in_play, by = c("player_name")) %>%
+  mutate(EV_group = cut(max_EV, breaks = c(0, 105.99, 111.99, 150), 
+                        labels = c("<106 EV Hitters", "106+ EV Hitters", "112+ EV Hitters")))
+
+#graphed divided into 2 EV groups
+wOBA_angle_velo_graph_2 <- max_EV_grouped2 %>%
+  ggplot(aes(x=launch_angle, y = woba_value, color = EV_group)) +
+  geom_smooth(method = "loess", span = .2, se = FALSE)+
+  coord_cartesian(ylim=c(0,1), xlim=c(-40,60)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))+
+  scale_color_manual(values = c("red", "blue"))+
+  theme_bw()+
+  theme(legend.title = element_blank())+
+  labs(x= "Launch Angle",
+       y = "wOBA",
+       title = "wOBA by Launch Angle")
+
+#grouped into 3 EV 
+wOBA_angle_velo_graph_3 <- max_EV_grouped3 %>%
+  ggplot(aes(x=launch_angle, y = woba_value, color = EV_group)) +
+  geom_smooth(method = "loess", span = .2, se = FALSE)+
+  coord_cartesian(ylim=c(0,1), xlim=c(-40,60)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))+
+  scale_color_manual(values = c("black", "orange", "blue"))+
+  theme_bw()+
+  theme(legend.title = element_blank())+
+  labs(x= "Launch Angle",
+       y = "wOBA",
+       title = "wOBA by Launch Angle")
+```
+
+.pull-left[
+
+```{r, echo=FALSE, fig.height=4}
+wOBA_angle_velo_graph_2 
+```
+
+]
+.pull-right[
+
+```{r, echo = FALSE, fig.height=4}
+wOBA_angle_velo_graph_3
+```
+]
+
+---
+# Data
+
+- Most of our EDA graphs use 2019 MLB data, the last 162 game season
+- Data is taken from Statcast on Baseball Savant
+- Variables
+  - We are interested in modeling **woba** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the EDA process include **battter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+  
+```{r out.width='30%', echo = FALSE, fig.align='center'}
+data_example <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  rename(`player` = player_name, `exit velocity` = launch_speed, `launch angle` = launch_angle, wOBA = woba_value, outcome = events) %>%
+  select(player, `exit velocity`, `launch angle`, wOBA, outcome)
+knitr::kable(head(data_example), format = 'html')
+```
+---
+# Hit outcome by launch angle and exit velocity 
+
+```{r, fig.width = 14, fig.height = 7, echo = FALSE, fig.align='center'}
+library(nationalparkcolors)
+pal2 <- park_palette("Everglades")
+
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run")) %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = events_group)) +
+  geom_point(alpha = 0.75) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_manual(values = rev(pal2))+
+  labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+```
+---
+#Breaking down the previous graph proportionally...
+
+```{r, fig.width = 14, fig.height = 6, echo = FALSE, fig.align='center'}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run"), 
+         launch_angle >= -20 & launch_angle <=50) %>%
+  mutate(launch_angle_group = 
+           cut(launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(!is.na(launch_angle_group)) %>%
+  ggplot(aes(x = launch_angle_group, fill = events_group))+
+  geom_bar(position = "fill")+
+  scale_fill_manual(values = pal2)+
+  labs(x = "launch angle", y= "", fill = "")+
+  theme_minimal()
+```
+
+---
+## Infield alignment did not impact the distribution of events at each angle grouping
+
+```{r, fig.width = 15, fig.height = 6, echo = FALSE, fig.align='center'}
+faceted_by_alignment <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home_run", 
+    TRUE ~ "other")) %>%
+  filter(if_fielding_alignment %in% c("Infield shift", "Standard", "Strategic")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home_run"), 
+         launch_angle >= -20 & launch_angle <=50) %>%
+  mutate(launch_angle_group = 
+           cut(launch_angle, breaks = c(-20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 
+                                        30, 35, 40, 45, 50))) %>%
+  filter(!is.na(launch_angle_group)) %>%
+  ggplot(aes(x = launch_angle_group, fill = events_group))+
+  geom_bar(position = "fill")+
+  scale_fill_manual(values = pal2)+
+  facet_wrap(~if_fielding_alignment, ncol = 1)+
+  labs(x = "launch angle", y="", fill = "")+
+  theme_minimal()
+faceted_by_alignment
+```
+---
+## Pitch type doesn't seem to have an impact either
+
+```{r, fig.width = 14, fig.height = 6, echo = FALSE, fig.align='center'}
+outcome_faceted <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  mutate(events_group = case_when(
+    events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                  "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                  "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+    events == "single" ~ "single",
+    events == "double" ~ "double", 
+    events == "triple" ~ "triple", 
+    events == "home_run" ~ "home run", 
+    TRUE ~ "other")) %>%
+  filter(events_group %in% c("out", "single", "double", "triple", "home run")) %>%
+  mutate(pitch_group = case_when(
+    pitch_name %in% c("4-Seam Fastball", "Fastball", "Cutter", "Sinker", "2-Seam Fastball") ~ "Fastball", 
+    pitch_name %in% c("Changeup", "Split-Finger", "Screwball") ~ "Offspeed", 
+    pitch_name %in% c("Slider", "Knuckle Curve", "Curveball", "Knuckle Curve", 
+                      "Knuckleball", "Eephus") ~ "Breaking", 
+    TRUE ~ pitch_name
+  )) %>%
+  filter(!is.na(pitch_group) & pitch_group %in% c("Offspeed", "Breaking", "Fastball")) %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = events_group)) +
+  geom_point(alpha = 0.75) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_manual(values = rev(pal2))+
+  facet_wrap(~pitch_group, ncol = 1)+
+  labs(x = "launch angle", y = "exit velocity (mph)", color = "")+
+  theme_minimal()+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+outcome_faceted
+```
+---
+
+### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
+
+.pull-left[
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, fig.align='center'}
+wOBA_by_LA_EV <- batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, color = woba_value)) +
+  geom_point(alpha = 0.5) + 
+  scale_x_continuous(n.breaks = 15, limits = c(-60, 90))+
+  scale_color_gradient(low = "darkblue", high = "darkorange")+
+  labs(x = "launch angle", y = "exit velocity (mph)", 
+       title = "wOBA Value by launch angle and exit velocity", color = "wOBA Value")+
+  theme_minimal()+
+  theme(
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+trout_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+
+trout_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = trout_stat_density, color = "white") + 
+  labs(title = "Mike Trout")
+trout_density_2019
+```
+]
+--
+.pull-right[
+```{r, fig.width = 7, fig.height = 5.5, echo = FALSE, fig.align='center'}
+heyward_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+
+heyward_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = heyward_stat_density, color = "white") + 
+  labs(title = "Jason Heyward")
+heyward_density_2019
+```
+]
+---
+### Now how can we model these player recommendations? 
+
+.pull-left[
+- We will fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
+**exit velocity** with the target **wOBA**
+
+  - GAMs have the ability to model complex *non-linear and non-monotonic* relationships between predictors and response variables, such as we see when we smooth the relationship between predictors **exit velocity** and **launch angle** with **wOBA**. 
+]
+.pull-right[
+```{r, echo=FALSE, fig.width = 6, fig.height = 2.5}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(launch_angle, woba_value))+
+  geom_smooth(se = FALSE)+
+  scale_x_continuous(limits = c(-40, 60))+
+  labs(title = "Launch angle vs. wOBA", x="", y="")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+
+```{r, echo =FALSE, fig.width = 6, fig.height = 2.5}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(launch_speed, woba_value))+
+  geom_smooth(se = FALSE)+
+  scale_x_continuous(limits = c(50, 120))+
+  labs(title = "Exit Velocity vs. wOBA", x="", y="")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+]
+---
+### Our first model missed out on the relationship *between* launch angle and exit velocity in impacting wOBA
+
+.pull-left[
+**Actual relationship**
+```{r, fig.height = 4, fig.width = 6, echo=FALSE}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(x=launch_angle, y=launch_speed, color = woba_value))+
+  geom_point() + 
+  labs(x="launch angle", y = "exit velocity", color = "wOBA", title = "wOBA by launch angle and exit velocity")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+
+]
+.pull-right[
+**Our model's output**
+```{r, echo=FALSE, fig.width=6, fig.height = 4}
+woba_model <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
+                  data = batter_all_2019, method = "REML")
+
+made_up_data <- expand.grid(launch_angle = seq(-50,70,2), launch_speed = seq(50,110,2))
+made_up_preds <- tibble(gam.preds = predict(woba_model, newdata = made_up_data)) 
+test <- bind_cols(made_up_data, made_up_preds)
+
+test %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, fill = gam.preds)) +
+  geom_raster() + 
+  labs(x="launch angle", y="exit velocity", 
+       fill = "wOBA", 
+       title = "Raster plot: gam(wOBA ~ s(launch angle) + s(exit velocity))")+
+  theme_minimal()+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+  
+```
+]
+---
+### With an interaction in our model, we much better see the true relationships, such as the increased wOBA from extra base hits and the band of singles
+
+.pull-left[
+**Actual relationship**
+```{r, fig.height = 4, fig.width = 6, echo=FALSE}
+batter_all_2019 %>%
+  filter(description == "hit_into_play") %>%
+  ggplot(aes(x=launch_angle, y=launch_speed, color = woba_value))+
+  geom_point() + 
+  labs(x="launch angle", y = "exit velocity", color = "wOBA", title = "wOBA by launch angle and exit velocity")+
+  theme_minimal()+
+  theme(plot.title.position = "plot", 
+        plot.title = element_text(face = "bold"), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+]
+.pull-right[
+**Our model's output** 
+```{r, echo=FALSE, fig.width=6, fig.height = 4, message=FALSE, warning=FALSE}
+woba_model2 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019, 
+                   method = "REML")
+
+made_up_preds2 <- tibble(gam.preds = predict(woba_model2, newdata = made_up_data)) 
+test2 <- bind_cols(made_up_data, made_up_preds2)
+
+test2 %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, fill = gam.preds)) +
+  geom_raster() + 
+  labs(x="launch angle", y="exit velocity", 
+       fill = "wOBA", title = "Raster plot: gam(wOBA ~ s(launch angle, exit velocity, k=200))")+
+  theme_minimal()+
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank())
+  
+```
+]
+---
+### We further evaluated our model by taking the following steps 
+
+1) Compared our interaction model to the original additive model and a model with tensor 
+smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
+
+2) Tuned our **k** to **200** with cross validation to find where the **decrease in RMSE for each model had plateaued**
+
+  - Then used `gam.check()` to ensure the **k** we chose adequately represented to complexity of the relationship between variables. 
+
+3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
+
+4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
+
+```{r, echo = FALSE, fig.width=5, fig.height=3, fig.align='center'}
+vis.gam(x=woba_model2,  
+        view = c("launch_angle", "launch_speed"), #variables
+        plot.type = "contour", #kind of plot
+        too.far = 0.05, #indicates what type of predictions should not be plotted because they are too far from the actual data, scaled from 0 to 1. The smaller the number, more area is not supported by data 
+        nlevels = 20)
+```
+---
+### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
+
+.pull-left[
+##### Let's test this out for Jason Heyward.
+**Our original thoughts...**
+- As a reminder, we recommended Heyward increase his launch angle to about 10-15 degrees. 
+```{r, fig.width = 5, fig.height = 3, echo = FALSE, fig.align='center'}
+heyward_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play") 
+
+heyward_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = heyward_stat_density, color = "white") + 
+  labs(title = "Jason Heyward")
+heyward_density_2019
+```
+]
+--
+.pull-right[
+**Our model's output**
+```{r, echo = FALSE}
+changing_launch_angle <- function(player_data, woba_model, net_change) {
+  #create tibble of predicted using model
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = player_data))
+  #find mean woba
+  woba_mean <- round(mean(tibbletest$gam.preds, na.rm = TRUE), 3)
+  
+  #begin by increasing launch angles by 1 to see what happens to mean 
+  add_player_data <- player_data
+  add_player_data$launch_angle <- player_data$launch_angle + 1
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = add_player_data))
+  add_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
+  
+  #begin by decreasing launch angles by 1 to see what happens to mean 
+  subtract_player_data <- player_data
+  subtract_player_data$launch_angle <- player_data$launch_angle - 1
+  tibbletest <- tibble(gam.preds = predict(woba_model, newdata = subtract_player_data))
+  subtract_woba_mean <- mean(tibbletest$gam.preds, na.rm = TRUE)
+  
+  #if increasing the angles leads to a greater woba
+  if (add_woba_mean > woba_mean) {
+    #increase the angles again
+    net_change <- net_change + 1
+    changing_launch_angle(add_player_data, woba_model, net_change)
+  } else if (subtract_woba_mean > woba_mean) {
+    #decrease the angles again 
+    net_change <- net_change -1
+    changing_launch_angle(subtract_player_data, woba_model, net_change)
+  } else {
+    #no change 
+    return (tibble(`predicted wOBA` = woba_mean, `recommended LA` = round(mean(player_data$launch_angle, na.rm = TRUE), 0), 
+            `degrees change` = net_change))
+  }
+}
+jason_heyward <- batter_all_2019 %>%
+  filter(player_name == "Heyward, Jason", description == "hit_into_play", 
+         !is.na(launch_angle), !is.na(launch_speed)) 
+
+result_heyward <- changing_launch_angle(jason_heyward, woba_model2, 0)
+result_heyward <- result_heyward %>% 
+  add_column(`true wOBA` = round(mean(jason_heyward$woba_value), 3)) %>%
+  add_column(`true LA` = round(mean(jason_heyward$launch_angle), 0))
+result_heyward <- result_heyward %>% 
+  select(`true wOBA`, `predicted wOBA`, `true LA`, `recommended LA`, `degrees change`)
+
+knitr::kable(head(result_heyward), format = 'html')
+```
+
+- Heyward consistently can reach the exit velocities of a power hitter! **He should increase his launch angle 15 degrees to 26 degrees**. 
+  - With the potential for more home runs and doubles, making this change is expected to raise Heyward's wOBA *for balls in play* **from 0.377 to around 0.442**. 
+]
+---
+
+### What does our model recommend for Mike Trout?
+.pull-left[
+**Our original thoughts...**
+- Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is a 3x MVP after all! 
+```{r, fig.width = 6, fig.height = 4, echo = FALSE, fig.align='center'}
+trout_stat_density <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play") 
+
+trout_density_2019 <- wOBA_by_LA_EV + stat_density2d(data = trout_stat_density, color = "white") + 
+  labs(title = "Mike Trout")
+trout_density_2019
+```
+]
+--
+.pull-right[
+**Our model's output...**
+```{r, echo=FALSE}
+mike_trout <- batter_all_2019 %>%
+  filter(player_name == "Trout, Mike", description == "hit_into_play",
+         !is.na(launch_angle), !is.na(launch_speed)) 
+
+result_trout <- changing_launch_angle(mike_trout, woba_model2, 0)
+result_trout <- result_trout %>% 
+  add_column(`true wOBA` = round(mean(mike_trout$woba_value), 3)) %>%
+  add_column(`true LA` = round(mean(mike_trout$launch_angle), 0))
+result_trout <- result_trout %>% 
+  select(`true wOBA`, `predicted wOBA`, `true LA`, `recommended LA`, `degrees change`)
+
+knitr::kable(head(result_trout), format = 'html')
+```
+
+- Our model agrees that Mike Trout should not change his launch angle. 
+  - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
+]
+---
+
+### Next Steps: for the short term we intend to...
+
+- Pick a final model - we recently created a **random forest model** and must pick between it and our current **GAM model**. 
+
+- Find a way to adjust a player's launch angle but still keep their exit velocity distribution intact. 
+
+- Decide how much change in wOBA is worth modifying a player's swing!
+
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://cdn11.bigcommerce.com/s-10c6f/images/stencil/1280x1280/products/15607/25366/BAN171-MD__51396.1559929230.jpg?c=2")
+```
+---
+
+### Next Steps: for the long term we are interested in...
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+  
+- We only looked at in play data:
+  - Do certain launch angles or changing launch angles lead to more strikeouts? 
+
+```{r out.width='40%', echo = FALSE, fig.align='center'}
+knitr::include_graphics("http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg")
+```
+

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Maximzing WOBA with Launch Angle and Exit Velocity</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
+    <meta name="date" content="2021-07-27" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Maximzing WOBA with Launch Angle and Exit Velocity
+### Sarah Sult, Brooke Coneeny, Erin Franke
+### 2021-07-27
+
+---
+
+
+
+
+
+
+# Motivation
+
+- Two of the most popular stats in the MLB have recently been launch angle and exit velocity 
+  - We wondered: can we prescribe a woba maximizing launch angle for an individual player 
+  based on their power profile?
+
+
+.pull-left[
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-2-1.png" width="504" /&gt;
+
+]
+.pull-right[
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-3-1.png" width="504" /&gt;
+]
+
+---
+# Data
+
+- Most of our EDA graphs use 2019 MLB data, the last 162 game season
+- Data is taken from Statcast on Baseball Savant
+- Variables
+  - We are interested in modeling **woba** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the EDA process include **battter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+  
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; player &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; exit velocity &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; launch angle &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; wOBA &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; outcome &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Zobrist, Ben &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 88.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Mazara, Nomar &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 90.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Duda, Lucas &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 106.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; McCann, Brian &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 96.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 29 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Hernández, Enrique &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 89.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Muncy, Max &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 97.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 44 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+# Hit outcome by launch angle and exit velocity 
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-5-1.png" width="1008" style="display: block; margin: auto;" /&gt;
+---
+#Breaking down the previous graph proportionally...
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-6-1.png" width="1008" style="display: block; margin: auto;" /&gt;
+
+---
+## Infield alignment did not impact the distribution of events at each angle grouping
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-7-1.png" width="1080" style="display: block; margin: auto;" /&gt;
+---
+## Pitch type doesn't seem to have an impact either
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-8-1.png" width="1008" style="display: block; margin: auto;" /&gt;
+---
+
+### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
+
+.pull-left[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-9-1.png" width="576" style="display: block; margin: auto;" /&gt;
+]
+--
+.pull-right[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-10-1.png" width="504" style="display: block; margin: auto;" /&gt;
+]
+---
+### Now how can we model these player recommendations? 
+
+.pull-left[
+- We will fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
+**exit velocity** with the target **wOBA**
+
+  - GAMs have the ability to model complex *non-linear and non-monotonic* relationships between predictors and response variables, such as we see when we smooth the relationship between predictors **exit velocity** and **launch angle** with **wOBA**. 
+]
+.pull-right[
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-11-1.png" width="432" /&gt;
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-12-1.png" width="432" /&gt;
+]
+---
+### Our first model missed out on the relationship *between* launch angle and exit velocity in impacting wOBA
+
+.pull-left[
+**Actual relationship**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-13-1.png" width="432" /&gt;
+
+]
+.pull-right[
+**Our model's output**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-14-1.png" width="432" /&gt;
+]
+---
+### With an interaction in our model, we much better see the true relationships, such as the increased wOBA from extra base hits and the band of singles
+
+.pull-left[
+**Actual relationship**
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-15-1.png" width="432" /&gt;
+]
+.pull-right[
+**Our model's output** 
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-16-1.png" width="432" /&gt;
+]
+---
+### We further evaluated our model by taking the following steps 
+
+1) Compared our interaction model to the original additive model and a model with tensor 
+smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
+
+2) Tuned our **k** to **200** with cross validation to find where the **decrease in RMSE for each model had plateaued**
+
+  - Then used `gam.check()` to ensure the **k** we chose adequately represented to complexity of the relationship between variables. 
+
+3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
+
+4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
+
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-17-1.png" width="360" style="display: block; margin: auto;" /&gt;
+---
+### Next, we created a function that uses player data and our model to manually adjust an individual player's launch angle to best maximize their wOBA. 
+
+.pull-left[
+##### Let's test this out for Jason Heyward.
+**Our original thoughts...**
+- As a reminder, we recommended Heyward increase his launch angle to about 10-15 degrees. 
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-18-1.png" width="360" style="display: block; margin: auto;" /&gt;
+]
+--
+.pull-right[
+**Our model's output**
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; true wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; predicted wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; true LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; recommended LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; degrees change &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0.377 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.442 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 26 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+- Heyward consistently can reach the exit velocities of a power hitter! **He should increase his launch angle 15 degrees to 26 degrees**. 
+  - With the potential for more home runs and doubles, making this change is expected to raise Heyward's wOBA *for balls in play* **from 0.377 to around 0.442**. 
+]
+---
+
+### What does our model recommend for Mike Trout?
+.pull-left[
+**Our original thoughts...**
+- Based on **Mike Trout's** density plot, we didn't recommend any changes to his swing...he is a 3x MVP after all! 
+&lt;img src="final_eda_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" style="display: block; margin: auto;" /&gt;
+]
+--
+.pull-right[
+**Our model's output...**
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:right;"&gt; true wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; predicted wOBA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; true LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; recommended LA &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; degrees change &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:right;"&gt; 0.537 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.56 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 22 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 22 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+- Our model agrees that Mike Trout should not change his launch angle. 
+  - The **true wOBA** and **predicted wOBA** differ above simply because the **predicted wOBA** is what our model predicted Trout's **ball-in-play wOBA** to be when it took in his batted ball data. 
+]
+---
+
+### Next Steps: for the short term we intend to...
+
+- Pick a final model - we recently created a **random forest model** and must pick between it and our current **GAM model**. 
+
+- Find a way to adjust a player's launch angle but still keep their exit velocity distribution intact. 
+
+- Decide how much change in wOBA is worth modifying a player's swing!
+
+&lt;img src="https://cdn11.bigcommerce.com/s-10c6f/images/stencil/1280x1280/products/15607/25366/BAN171-MD__51396.1559929230.jpg?c=2" width="40%" style="display: block; margin: auto;" /&gt;
+---
+
+### Next Steps: for the long term we are interested in...
+
+- Understanding and quantifying how hard it is for a player to change their launch angle 
+
+  - Baseball is a mental game - are players' mental states negatively impacted with this change?
+  
+- We only looked at in play data:
+  - Do certain launch angles or changing launch angles lead to more strikeouts? 
+
+&lt;img src="http://www.goluputtar.com/wp-content/uploads/2015/11/Nice-Baseball-Quote-It-Is-A-Mental-Game.jpg" width="40%" style="display: block; margin: auto;" /&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
