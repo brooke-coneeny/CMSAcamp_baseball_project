@@ -27,8 +27,19 @@ woba_model<- read_rds("public_data/woba_model.rds")
 
 ####################################################################################################################################
 
-#Creating a linear model which predicts launch angle based off of the attack angle the batter swings with and the height of the pitch
+#Graph relationships between attack angle and launch angle to see if linear 
+batter_all_2019hp %>%
+  ggplot(aes(x=attack_angle, y=launch_angle))+
+  geom_point(alpha=.5)+
+  geom_smooth()
 
+#Graph relationships between pitch height and launch angle to see if linear 
+batter_all_2019hp %>%
+  ggplot(aes(x=plate_z, y=launch_angle))+
+  geom_smooth()+
+  geom_point(alpha=.1)
+
+#Creating a linear model which predicts launch angle based off of the attack angle the batter swings with and the height of the pitch
 predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data = batter_all_2019)
 predicted_LA <- read_rds("public_data/LA_model.rds")
 
@@ -219,10 +230,10 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
 ##         final attack angle, and change in angle
 
 repeat_adjust_attack <- function(player_data, player_woba){
-  final_results <-tibble(predicted_LA_adjust_attack(woba_model_interaction, predicted_LA, player_data, player_woba, 
+  final_results <-tibble(predicted_LA_adjust_attack(woba_model, predicted_LA, player_data, player_woba, 
                                                     player_data$attack_angle, player_data$attack_angle, 0))
   for(i in 1:5){
-    results <- predicted_LA_adjust_attack(woba_model_interaction, predicted_LA, player_data, player_woba, 
+    results <- predicted_LA_adjust_attack(woba_model, predicted_LA, player_data, player_woba, 
                                           player_data$attack_angle, player_data$attack_angle, 0)
     final_results <- bind_rows(final_results, results)
   }
@@ -234,11 +245,12 @@ repeat_adjust_attack <- function(player_data, player_woba){
 ####################################################################################################################################
 
 # Using Mike Trout to test b/c it should be short
-mtrout <- batter_all_2019 %>%
-  filter(player_name == "Trout, Mike") %>%
-  clean_edges()
+mtrout <- batter_all_2019hp %>%
+  filter(player_name == "Trout, Mike")
+
+clean_edges(mtrout)
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
-predicted_LA_adjust_attack(woba_model_interaction, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
+predicted_LA_adjust_attack(woba_model, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
                            mtrout$attack_angle, 0)
 
 repeat_adjust_attack(mtrout, mtrout_woba)
@@ -246,11 +258,12 @@ repeat_adjust_attack(mtrout, mtrout_woba)
 ####################################################################################################################################
 
 # Using Jason Heyward to test
-jhey <- batter_all_2019 %>%
-  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
-  clean_edges()
+jhey <- batter_all_2019hp %>%
+  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
+
+clean_edges(jhey)
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
-predicted_LA_adjust_attack(woba_model_interaction, predicted_LA, jhey, jhey_woba, jhey$attack_angle, 
+predicted_LA_adjust_attack(woba_model, predicted_LA, jhey, jhey_woba, jhey$attack_angle, 
                            jhey$attack_angle, 0)
 
 repeat_adjust_attack(jhey, jhey_woba)
@@ -264,78 +277,77 @@ repeat_adjust_attack(jhey, jhey_woba)
 ##   orig_attack: the original attack angle the batter is swinging at 
 ### Return: returns a tibble with the different attack angles and their corresponding woba values 
 
-adjust_attack_range <- function(woba_model, LA_model, player_data, orig_attack) {
-  avg_woba_values <- vector() #vector of final predicted woba values 
-  predicted_woba_per_attack <- vector() #vector of woba values all at same attack angle 
-  attack_degrees <- c(0:30) #vector holding different attack angles
+test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
   
-  # Look at all different attack angles 
-  for (possible_attack in 0:30) {
-    for (n in 1:10) {
-      # Vector for exit velocities
-      EV_vector4 <- vector()
+  # Initialize vectors for results
+  original_attack <- c(rep(orig_attack[1], times=31))
+  original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
+  possible_attack_vec <- c(0:30)
+  predicted_woba <- c()
+  avg_predicted_woba <- c()
+  
+  for(possible_attack in 0:30){
+    # Repeat 10 times
+    for(n in 1:10){
+      EV_vector4 <- vector()    # To hold launch speeds for this function
       
-      # Change in attack angle
-      change_attack_data <- player_data
-      change_attack_data$attack_angle <- possible_attack
+      # Find the possible launch angle for this attack angle
+      player_data$attack_angle <- possible_attack
+      pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
+      pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                          sd = sigma(LA_model)), 
+                                            launch_angle = lm.preds + noise)
       
-      # Model the predicted angles given the new  attack angle
-      pred_angles4 <- tibble(lm.preds = predict(LA_model, newdata = change_attack_data))
+      for(i in 1:length(pred_angles$launch_angle)){
+        # Sample a launch speed around their actual attack angle
+        hits_at_angle <- player_data %>% 
+          filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                   orig_attack-3 & !is.na(launch_speed))
+        # Randomly sample 1 exit velocity form similar hits
+        EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+        pred_EV <- hits_at_angle[EV_sample_index,] 
+        # Add that launch speed to vector as the predicted launch speed 
+        EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+      }
       
-      # Creating an rnorm with the standard deviation of the residuals to create noise
-      pred_angles4 <- pred_angles4 %>% mutate(noise = rnorm(n = length(pred_angles4$lm.preds), 
-                                                            mean = 0, sd = sigma(LA_model)),launch_angle = lm.preds + noise)
+      # Create modeled data for this attack angle
+      modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+      preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+      xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
       
-      # Use sampling to find a corresponding exit velocity for predicted launch angles
-      EV_vector4 <- sampling(pred_angles4, player_data, EV_vector4, orig_attack)
-      
-      # Combine  predicted launch angles with predicted exit velocities into one tibble
-      modeled_data <- tibble(launch_angle = pred_angles4$launch_angle, launch_speed = EV_vector4)
-      
-      # Predicted woba values from predicted launch angles and exit velocities
-      preds4 <- tibble(gam.preds = predict(woba_model_interaction, newdata = modeled_data)) 
-      
-      # Find the mean expected woba value for the batter 
-      xwOBA <- mean(preds4$gam.preds, na.rm = TRUE)
-      
-      # Add the mean expected woba to vector of all woba values at that attack 
-      predicted_woba_per_attack <- c(predicted_woba_per_attack, xwOBA)
+      predicted_woba <- c(predicted_woba, xwOBA)
     }
-    
-    # Add the mean expected woba to vector of different woba values 
-    avg_woba_values <- c(avg_woba_values, mean(predicted_woba_per_attack))
+    avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
   }
-  varying_woba <- tibble(attack_angle = attack_degrees, woba = avg_woba_values)
-  return(varying_woba)
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
 }
 
 ####################################################################################################################################
 
 # Testing out the plot on Mike Trout 
-woba_values <- adjust_attack_range(woba_model_interaction, predicted_LA, mtrout, mtrout$attack_angle)
+mtrout_woba_values <- test_all_attack(woba_model, predicted_LA, mtrout, mtrout$attack_angle)
 
-woba_plot <- woba_values %>%
-  ggplot(aes(x = attack_angle, y = woba)) +
-  geom_line() +
-  geom_smooth() +
-  scale_x_continuous(breaks = seq(from = 0,to = 30, by = 1)) +
-  theme_bw() +
+mtrout_attack_angles_plot <- mtrout_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
   geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
 
 # Testing out the plot on Jason Heyward
-woba_values_heyward <-  vector()
-woba_values_heyward <- adjust_attack_range(woba_model_interaction, predicted_LA, jhey, jhey$attack_angle)
+jheyward_woba_values <- test_all_attack(woba_model, predicted_LA, jheyward, jheyward$attack_angle)
 
-woba_plot <- woba_values_heyward %>%
-  ggplot(aes(x = attack_angle, y = woba)) +
-  geom_line() +
-  geom_smooth() +
-  scale_x_continuous(breaks = seq(from = 0,to = 30, by = 1)) +
-  theme_bw() +
-  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+jheyward_attack_angles_plot <- jheyward_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = jheyward$attack_angle, color="red", linetype = "dashed")+
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Jason Heyward")
