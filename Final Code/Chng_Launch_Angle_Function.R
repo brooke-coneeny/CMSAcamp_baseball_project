@@ -87,6 +87,7 @@ jason_heyward <- batter_all_2019hp %>%
   filter(player_name == "Heyward, Jason", description == "hit_into_play", 
          !is.na(launch_angle), !is.na(launch_speed)) 
 
+#Heyward may get stuck oscillating between two values (but we determined this was not the best process anyways)
 result_heyward <- changing_launch_angle(jason_heyward, woba_model, 0)
 result_heyward <- result_heyward %>% 
   add_column(true_wOBA = mean(jason_heyward$woba_value)) %>%

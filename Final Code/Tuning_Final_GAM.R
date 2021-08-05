@@ -1,5 +1,6 @@
 ####################################################################################################################################
-#This file tunes our final GAM by testing different values of k 
+#This file tunes our final GAM by testing different values of k using 5 fold cross validation. Expect 
+#these to take a LONG time to run (sometimes upward of an hour)
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -12,6 +13,10 @@ library(mgcv)
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2019hp <- batter_all_2019 %>%
   filter(description == "hit_into_play")
+
+#Creating the test fold
+set.seed(2020)
+batter_all_2019hp <- batter_all_2019hp %>% mutate(test_fold = sample(rep(1:5, length.out = n())))
 
 #Loading in GAM 
 woba_model <- read_rds("public_data/woba_model.rds")
@@ -156,10 +161,50 @@ holdout_predictions_k3 %>%
 
 ####################################################################################################################################
 
-#After lots of cross validation we came to the conclusion that a k of 200 was a good place to stop 
+#After lots more cross validation we came to the conclusion that a k of 200 was a good place to stop 
 #We also used a gam.check with this new k value to ensure it adequately represents the complexity of the relationships btwn variables
+
+# This shows the calculations for 100, 200, and 300 to show how the RMSEs plateaued
+holdout_predictions_k4 <-
+  map_dfr(unique(batter_all_2019hp$test_fold),
+          function(holdout){
+            # Separate test and training data:
+            test_data <- batter_all_2019hp %>% filter(test_fold == holdout)
+            train_data <- batter_all_2019hp %>% filter(test_fold != holdout)
+            
+            # Train models:
+            model_100 <- gam(woba_value ~ s(launch_angle, launch_speed, k=100), data = train_data, 
+                            method = "REML")
+            model_200 <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = train_data, 
+                            method = "REML")
+            model_300 <- gam(woba_value ~ s(launch_angle, launch_speed, k=300), data = train_data, 
+                            method = "REML")
+            
+            # Return tibble of holdout results:
+            tibble(model_100_preds = predict(model_100, newdata = test_data),
+                   model_200_preds = predict(model_200, newdata = test_data),
+                   model_300_preds = predict(model_300, newdata = test_data),
+                   test_actual = test_data$woba_value, test_fold = holdout)
+          })
+
+# Graphs RMSEs for each model tested ks 
+holdout_predictions_k4 %>%
+  pivot_longer(model_100_preds:model_300_preds,
+               names_to = "type", values_to = "test_preds") %>%
+  group_by(type, test_fold) %>%
+  summarize(rmse = sqrt(mean((test_actual - test_preds)^2, na.rm = TRUE))) %>%
+  ggplot(aes(x=type, y = rmse)) +
+  geom_point() +
+  theme_bw() +
+  stat_summary(fun = mean, geom = "point",
+               color = "red") +
+  stat_summary(fun.data = mean_se,
+               geom = "errorbar", color = "red")
 
 woba_model <- gam(woba_value ~ s(launch_angle, launch_speed, k=200), data = batter_all_2019hp, 
                          method = "REML")
 gam.check(woba_model, k.sample = 50000, k.rep = 250)
+
+#Update the public code with this new woba_model
+write_rds(woba_model, "public_data/woba_model.rds")
 
