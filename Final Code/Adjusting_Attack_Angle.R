@@ -1,6 +1,7 @@
 ####################################################################################################################################
 #This file shows our final method for adjusting a player's attack angle (plane of swing) to find their 
-#best wOBA
+#best wOBA. Please note this describes the last function as the others would cut off without changing
+#the attack angle much due to some variation in calculating the wOBA.
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -41,7 +42,11 @@ batter_all_2019hp %>%
   geom_point(alpha=.1)
 
 #Creating a linear model which predicts launch angle based off of the attack angle the batter swings with and the height of the pitch
-predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data = batter_all_2019)
+predicted_LA <- glm(launch_angle ~ attack_angle + plate_z, data = batter_all_2019hp)
+#Be careful, this may end up being too large to push to git
+write_rds(predicted_LA, "public_data/LA_model.rds")
+
+#Now you can read it in as needed
 predicted_LA <- read_rds("public_data/LA_model.rds")
 
 ####################################################################################################################################
@@ -247,9 +252,8 @@ repeat_adjust_attack <- function(player_data, player_woba){
 
 # Using Mike Trout to test b/c it should be short
 mtrout <- batter_all_2019hp %>%
-  filter(player_name == "Trout, Mike")
-
-clean_edges(mtrout)
+  filter(player_name == "Trout, Mike" & !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed)) %>%
+  clean_edges()
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(woba_model, predicted_LA, mtrout, mtrout_woba, mtrout$attack_angle, 
                            mtrout$attack_angle, 0)
@@ -260,9 +264,8 @@ repeat_adjust_attack(mtrout, mtrout_woba)
 
 # Using Jason Heyward to test
 jhey <- batter_all_2019hp %>%
-  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))
-
-clean_edges(jhey)
+  filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
+  clean_edges()
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 predicted_LA_adjust_attack(woba_model, predicted_LA, jhey, jhey_woba, jhey$attack_angle, 
                            jhey$attack_angle, 0)
@@ -353,10 +356,10 @@ jheyward_attack_angles_plot <- jheyward_woba_values %>%
        y = "Predicted wOBA",
        title = "Jason Heyward")
 
-####################################################################################################################################
-
-
-
-
-
+#We didn't expect the graph to continue trending upwards. We expected it to peak in the 20s. This is likely
+#because we are assuming they successfully hit the same set of balls, but as attack angle gets very high,
+#it becomes very difficult to successfully make contact with the ball (as we will investigate in future
+#files). Therefore, we probably overestimated wOBA for very high attack angles. In the future we hope to
+#make a logistic model that determins whether a ball will be hit into play and THEN continue with this 
+#process.
 
