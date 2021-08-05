@@ -1,5 +1,5 @@
 ####################################################################################################################################
-#This file explores how the three different GAMs we created and how we came about chosing our final model
+#This file explores  the three different GAMs we created and how we came about choosing our final model
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -33,14 +33,14 @@ batter_all_2019hp %>%
 woba_model_splines <- gam(woba_value ~ s(launch_angle) + s(launch_speed), 
                   data = batter_all_2019, method = "REML") 
 
-woba_model <- gam(woba_value ~ s(launch_speed, launch_angle, k = 200), 
+woba_model <- gam(woba_value ~ s(launch_speed, launch_angle), 
                   data = batter_all_2019, method = "REML")
 
 woba_model_interaction_intercepts <- gam(woba_value ~ s(launch_speed) + 
                                            s(launch_angle) + ti(launch_speed, launch_angle),
                                          data = batter_all_2019, method = "REML")
 
-#We created rds objects for each model
+#We created rds objects for each model so that we wouldn't have to re-run them and would save time
 write_rds(woba_model_splines, "public_data/woba_model_splines.rds")
 write_rds(woba_model, "public_data/woba_model.rds")
 write_rds(woba_model_interaction_intercepts, "public_data/woba_model_interaction_intercepts.rds")
@@ -74,6 +74,7 @@ test_data2 <- bind_cols(made_up_data, made_up_preds2)
 summary(woba_model)
 gam.check(woba_model)
 
+#Do note this isn't as great as the raster in the presentations because we have not yet tuned k
 raster_check2 <- test_data2 %>%
   ggplot(aes(x=launch_angle, y = launch_speed, fill = gam.preds)) +
   geom_raster() + theme_bw()

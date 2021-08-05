@@ -1,11 +1,17 @@
-#can put graphs that we want to present in here
+####################################################################################################################################
+#This file holds the EDA we did to begin this project
+#Brooke Coneeny, Sarah Sult, and Erin Franke 
+#CMSAcamp 2021
+####################################################################################################################################
+
+#Loading libraries
 library(tidyverse)
 #devtools::install_github("katiejolly/nationalparkcolors")
 library(nationalparkcolors)
 pal <- park_palette("Saguaro")
 pal2 <- park_palette("Everglades")
 
-# Loading Data ------------------------------------------------------------
+# Loading Data
 
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 
@@ -18,7 +24,9 @@ in_play_2019 <- batter_all_2019 %>%
   select(launch_angle, woba_value, player_name, launch_speed) 
 
 #max EV per player and combine with balls in play (so there is a column categorizing the player who 
-#hit the ball by their max EV in the season)
+  #hit the ball by their max EV in the season)
+#RESULT: All three groups had a local maximum at a lower launch angle but once you increased launch angle
+  #the players with higher exit velocities had much better wOBAs
 max_EV_2019_grouped2 <- batter_all_2019 %>%
   group_by(player_name) %>%
   summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
@@ -64,7 +72,8 @@ wOBA_angle_velo_graph_3 <- max_EV_2019_grouped3 %>%
        y = "wOBA",
        title = "wOBA by Launch Angle")
 
-#Examine different launch angles and out comes --------------------------------
+#Examine different launch angles and outcomes --------------------------------
+#RESULT: we see  that (10, 15] has the least amount of outs, no home runs below (15, 20]
 
 launch_angle_outcomes <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
@@ -150,6 +159,9 @@ faceted_by_alignment <- batter_all_2019 %>%
   theme_minimal()
 
 #graph showing hit outcome by exit velocity and launch angle ------------------
+#RESULT: A noticeable clump of home runs, a band of singles that curves, and a clump of outs in between
+#the hook of the singles and home runs (where fly outs are located)
+
 outcome_by_LA_EV <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -200,7 +212,8 @@ outcome_faceted <- batter_all_2019 %>%
        title = "Hit outcome by launch angle and exit velocity by pitch type", color = "")+
   theme_minimal()
 
-#hows does hit distance correlate with launch angle?--------------------------
+#Investigated how hit distance correlates with launch angle?--------------------------
+#RESULT: See the home run clump at the top
 LA_versus_hitDistance <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
   mutate(events_group = case_when(
@@ -220,7 +233,8 @@ LA_versus_hitDistance <- batter_all_2019 %>%
   geom_jitter()+
   theme_minimal()
 
-#where the max EV hits landed colored by outcome
+#View where the max EV hits landed colored by outcome ---------------------------------------------
+#RESULT: can see the pull of each handed batter, not used for this project much otherwise
 left_righty_maxEV_outcome <- batter_all_2019 %>%
   group_by(player_name) %>%
   summarize(max_EV = max(launch_speed, na.rm = TRUE)) %>%
