@@ -1,5 +1,6 @@
 ####################################################################################################################################
-#This file explores the joint porbabilities of launch angles and exit velocities
+#This file shows our final method for adjusting a player's attack angle (plane of swing) to find their 
+#best wOBA
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################

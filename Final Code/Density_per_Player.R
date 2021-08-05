@@ -48,7 +48,7 @@ wOBA_by_LA_EV <- batter_all_2019 %>%
        title = "wOBA Value by launch angle and exit velocity", color = "wOBA Value")+
   theme_minimal()
 
-#Both these graphs look very similar, especially the j-hook of singles and lower woba, also the clump of homeruns and high woba
+#These are the same graphs but colored by different values (wOBA is just a different representation of outcome)
 
 ####################################################################################################################################
 
