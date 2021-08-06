@@ -207,19 +207,17 @@ predicted_LA_adjust_attack <- function(woba_model, LA_model, player_data, orig_w
   if(xwOBA1 < xwOBA2 & xwOBA2 > xwOBA3){
     # Recursively call with +1 attack angle data
     change_in_attack <- change_in_attack + 1
-    change_in_woba <- change_in_woba + xwOBA2 - xwOBA1
     predicted_LA_adjust_attack(woba_model, LA_model, plus_one_attack, orig_woba, orig_attack, attack+1, change_in_attack)
   }
   # Else if original < -1
   else if (xwOBA1 < xwOBA3){
     change_in_attack <- change_in_attack - 1
-    change_in_woba <- change_in_woba + xwOBA3 - xwOBA1
     # Recursively call with -1 attack angle data
     predicted_LA_adjust_attack(woba_model, LA_model, minus_one_attack, orig_woba, orig_attack, attack-1, change_in_attack)
   }
   # Else
   else{
-    change_in_woba <- change_in_woba
+    change_in_attack <- change_in_attack
     # Return the orig_woba, xwOBA, orig_attack, and attack angles
     return (tibble(original_woba = orig_woba, predicted_woba = xwOBA1, original_attack = orig_attack, 
                    reccomended_attack = attack, change_in_attack = change_in_attack)[1,])
