@@ -158,13 +158,15 @@ contact_dataset <- batted_balls %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
-         woba_value, description, description2, events, balls, strikes, plate_z, contact)
+         woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
+  mutate(contact = as.factor(contact)) %>%
+  filter(plate_z <=5 & plate_z >= -2.5)
 
 # Create training and test datasets. 
 set.seed(88)
 
 nrow(contact_dataset)*0.75
-sample_rows <- sample(nrow(contact_dataset), 1216292)
+sample_rows <- sample(nrow(contact_dataset), 1208368)
 
 contact_train <- contact_dataset[sample_rows,]
 contact_test <- contact_dataset[-sample_rows,]
@@ -176,10 +178,22 @@ summary(k_mod2)
 exp(coef(k_mod2))
 
 # Test the model on the test dataset. 
-contact_test$pred <- predict(k_mod2, contact_test, type = "response")
+contact_test$prob <- predict(k_mod2, contact_test, type = "response")
+contact_test$pred[contact_test$prob >= .36] = 1
+contact_test$pred[contact_test$prob < .36] = 0
+contact_test$pred[is.na(contact_test$prob)] = 0
 
 # Compute the accuracy of the simpler tree
-mean(contact_test$pred == contact_test$contact)
+mean(contact_test$pred == contact_test$contact) #accuracy seems highest when splitting at 0.36. 
+#accuracy is 0.794
+#the average rate of contact is 0.7686 in the contact_test dataset
+
+contact_dataset %>%
+  ggplot(aes(x=attack_angle, y=plate_z, color = contact))+
+  geom_point()
+
+
+
 
 ggplot(contact_dataset, aes(x=attack_angle, y=contact))+
   geom_jitter(width=0, height = 0.05)+
