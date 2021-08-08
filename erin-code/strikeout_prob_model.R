@@ -153,7 +153,8 @@ contact_batted_balls <- batter_all_1621 %>%
                              description2 %in% c("foul", "hit_into_play") ~ 0))
 # Create the contact dataset. This takes all pitches that were swung at from above, and assigns it the player's attack 
 #angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
-#balls in a given season. 
+#balls in a given season. Additionally, make contact a factor (0 or 1) and filter for pitches with a height less than 
+#or equal to 5 ft and greater than -2.5 feet (I assume this just means they bounce far in front of the plate). 
 contact_dataset <- batted_balls %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
@@ -161,6 +162,10 @@ contact_dataset <- batted_balls %>%
          woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
   mutate(contact = as.factor(contact)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
+# Scatterplot of attack angle versus pitch height colored by if contact was made. 
+contact_dataset %>%
+  ggplot(aes(x=attack_angle, y=plate_z, color = contact))+
+  geom_point()
 
 # Create training and test datasets. 
 set.seed(88)
@@ -177,39 +182,43 @@ k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_train, family = "
 summary(k_mod2)
 exp(coef(k_mod2))
 
-# Test the model on the test dataset. 
+# Test the model on the test dataset. I played around with the threshold to split at and found that 
+#0.36 seemed to maximize the overall accuracy of the model (0.794). The average rate of contact 
+#is 0.7686 in the contact_test dataset. 
 contact_test$prob <- predict(k_mod2, contact_test, type = "response")
 contact_test$pred[contact_test$prob >= .36] = 1
 contact_test$pred[contact_test$prob < .36] = 0
 contact_test$pred[is.na(contact_test$prob)] = 0
 
-# Compute the accuracy of the simpler tree
-mean(contact_test$pred == contact_test$contact) #accuracy seems highest when splitting at 0.36. 
-#accuracy is 0.794
-#the average rate of contact is 0.7686 in the contact_test dataset
+# Compute the overall accuracy of the simpler tree
+mean(contact_test$pred == contact_test$contact) 
 
-contact_dataset %>%
-  ggplot(aes(x=attack_angle, y=plate_z, color = contact))+
-  geom_point()
+# Create side by side boxplots for the predicted probability. 
+k_mod2 %>%
+  augment(type.predict = "response") %>%
+  ggplot(aes(y = .fitted, x = contact)) + 
+  geom_boxplot() + 
+  ylab("Predicted probability of swing and miss") + 
+  xlab("Acutal contact (1 = missed, 0 = fouled/hit into play") + 
+  theme_classic()
 
+# Create the confusion matrix and compute the accuracy of both predicting swings and misses 
+#and also hit into play. With the threshold that maximized of the overall accuracy (0.36), the accuracy
+#of predicting the "rare" event of swing and miss is very low at 0.205. 
+threshold <- 0.36
+k_mod2 %>%
+  augment(type.predict = "response") %>%
+  mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
+  count(contact, predict_swing_miss)
 
-
-
-ggplot(contact_dataset, aes(x=attack_angle, y=contact))+
-  geom_jitter(width=0, height = 0.05)+
-  geom_smooth(method = "glm", method.args = list(family = "binomial"))
-
-contact_dataset %>%
-  filter(plate_z >0, plate_z < 6) %>%
-  ggplot(aes(x=plate_z, y=contact))+
-  geom_jitter(width=0, height = 0.05)+
-  geom_smooth(method = "glm", method.args = list(family = "binomial"))
-
-  
-           
-
-
-
+# Therefore, we should further lower the threshold in order to increase the probability of predicting the 
+#rare event correctly. With a threshold of 0.29, the model predicts 84.64% of contact correctly and 
+#41.22% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.6%. 
+threshold <- 0.29
+k_mod2 %>%
+  augment(type.predict = "response") %>%
+  mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
+  count(contact, predict_swing_miss)
 
 #Ron's model
 k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
