@@ -144,20 +144,42 @@ attack_preds %>%
 
 # ANOTHER MODEL: trying to model probability of a swing and miss given attack angle and pitch height
 
+# Filter for balls that were swung at in the dataset with all pitches between 2016 and 2021. Denote pitches that 
+#were missed with a 1 (the "succcess" in this logistic model is a swing and miss) and denote pitches that some kind 
+#of contact was made with a 0 (fouls, hit into play). 
 contact_batted_balls <- batter_all_1621 %>%
   filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
   mutate(contact = case_when(description2 == "swinging_strike" ~ 1, 
                              description2 %in% c("foul", "hit_into_play") ~ 0))
-
+# Create the contact dataset. This takes all pitches that were swung at from above, and assigns it the player's attack 
+#angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
+#balls in a given season. 
 contact_dataset <- batted_balls %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
          woba_value, description, description2, events, balls, strikes, plate_z, contact)
 
-k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_dataset, family = "binomial")
+# Create training and test datasets. 
+set.seed(88)
+
+nrow(contact_dataset)*0.75
+sample_rows <- sample(nrow(contact_dataset), 1216292)
+
+contact_train <- contact_dataset[sample_rows,]
+contact_test <- contact_dataset[-sample_rows,]
+
+# Create the logistic model. Predict whether contact will be made given a player's attack angle and 
+#the height of the pitch. 
+k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_train, family = "binomial")
 summary(k_mod2)
 exp(coef(k_mod2))
+
+# Test the model on the test dataset. 
+contact_test$pred <- predict(k_mod2, contact_test, type = "response")
+
+# Compute the accuracy of the simpler tree
+mean(contact_test$pred == contact_test$contact)
 
 ggplot(contact_dataset, aes(x=attack_angle, y=contact))+
   geom_jitter(width=0, height = 0.05)+
