@@ -108,23 +108,72 @@ strikeout_eda <- plate_appearances %>%
 
 ####################################################################################################################################
 
-# Build a logistic model for swing and miss rate based on a player's attack angle. This uses data where 
+#LOGISTIC MODEL (GENERAL) FOR ATTACK ANGLE VS SWING & MISS RATE
+
+#Create a scatterplot to show the general relationship. This uses data where 
 #each row represents one season for player's with at least 50 batted balls and their number of swing and misses and 
 #number of swings where they make some kind of contact (either foul, foul tip, or hit into play) are listed. 
+strikeout_eda <- strikeout_eda %>%
+  mutate(swing_miss_percent = swinging_strike / (swinging_strike + contact))
+strikeout_eda %>%
+  ggplot(aes(x=attack_angle, y = swing_miss_percent))+
+  geom_point()+
+  theme_minimal()
+
+#correlation coefficient 0.3199
+cor(strikeout_eda$attack_angle, strikeout_eda$swing_miss_percent)
+
+# Build a logistic model for swing and miss rate based on a player's attack angle.
 swing_miss_prob <- glm(cbind(swinging_strike, contact)~attack_angle, family="binomial", data=strikeout_eda)
 summary(swing_miss_prob)
 
 # create a mock data frame of attack angles from 0 to 30 spaced by 0.5. Predict the swing and miss rate
 #at each attack angle using the model above
-attack_angles <- data.frame("attack_angle" = seq(0, 30, 0.5))
-preds <- predict(swing_miss_prob,attack_angles, type = "response")
-attack_preds <- cbind(attack_angles, preds)
+attack_angles_mock <- data.frame("attack_angle" = seq(0, 30, 0.5))
+preds <- predict(swing_miss_prob,attack_angles_mock, type = "response")
+attack_preds <- cbind(attack_angles_mock, preds)
 
 #plot the swing and miss prediction on the y axis for a given attack angle. We see
 #a pretty linear relationship. 
 attack_preds %>%
   ggplot(aes(x=attack_angle, y=preds))+
-  geom_line()
+  geom_line()+
+  theme_minimal()
+
+####################################################################################################################################
+
+# ANOTHER MODEL: trying to model probability of a swing and miss given attack angle and pitch height
+
+contact_batted_balls <- batter_all_1621 %>%
+  filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
+  mutate(contact = case_when(description2 == "swinging_strike" ~ 1, 
+                             description2 %in% c("foul", "hit_into_play") ~ 0))
+
+contact_dataset <- batted_balls %>%
+  left_join(contact_batted_balls, by=c("year", "player_name")) %>%
+  left_join(attack_angles, by = c("year", "player_name")) %>%
+  select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
+         woba_value, description, description2, events, balls, strikes, plate_z, contact)
+
+k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_dataset, family = "binomial")
+summary(k_mod2)
+exp(coef(k_mod2))
+
+ggplot(contact_dataset, aes(x=attack_angle, y=contact))+
+  geom_jitter(width=0, height = 0.05)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))
+
+contact_dataset %>%
+  filter(plate_z >0, plate_z < 6) %>%
+  ggplot(aes(x=plate_z, y=contact))+
+  geom_jitter(width=0, height = 0.05)+
+  geom_smooth(method = "glm", method.args = list(family = "binomial"))
+
+  
+           
+
+
+
 
 #Ron's model
 k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
