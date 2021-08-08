@@ -110,7 +110,7 @@ batter_all_1621_logit <- batter_all_1621 %>%
   summarize(attack_angle = median(launch_angle)) %>%
   right_join(batter_all_1621, by = c("player_name")) %>%
   filter(!is.na(plate_z), !is.na(attack_angle), !is.na(description), !is.na(release_speed),
-         !is.na(pitch_type))
+         !is.na(pitch_type), year != 2019) #remove the year you test it on
 
 #Adding a yes/no column for if a ball was hit into play
 batter_all_2019_logit <- batter_all_2019_logit %>%
@@ -128,13 +128,14 @@ avg_and_attack_modeling <- stats_2019 %>% left_join(name_and_attack, by = c("pla
 # Creating initial glm ----------------------------------------------------
 
 init_logit <- glm(is_hit_into_play ~ attack_angle, #+ plate_z + release_speed, 
-                  data = batter_all_2019_logit, family = "binomial")
+                  data = batter_all_1621_logit, family = "binomial")
 summary(init_logit)
 
 #pred_hit_outcomes <- ifelse(init_logit$fitted.values > 0.5, "hit", "no hit")
 
 #table("Predictions" = pred_hit_outcomes, "Observed" = batter_all_2019_logit$is_hit_into_play)
 max(init_logit$fitted.values)
+min(init_logit$fitted.values)
 
 #I think there are so few hit into play that when you have a a similar attack angle/plate height 
 #combination the not hit into play lowers the prob of a hit
@@ -150,6 +151,7 @@ init_avg_model <- gam(ba ~ s(attack_angle, k=125), data=avg_and_attack_modeling)
 summary(init_avg_model)
 gam.check(init_avg_model, k.sample = 50000, k.rep = 250)
 
+
 # Model strike percentage  ---------------------------------------------
 strike_modeling %>%
   ggplot(aes(x=attack_angle, y=strike_percent))+
@@ -160,3 +162,96 @@ summary(strike_percent_init_model)
 
 
 
+
+
+
+
+# Function to use pred avg,  probs of hit to find wOBA --------------------
+
+#Function that will get the sample of balls in play
+get_sample_hits <- function(ba_model, hit_model, player_data){
+  possible_attack_vec <- c()
+  launch_angles <- c()
+  launch_speeds <- c()
+  pitch_heights <- c()
+  for(possible_attack in 0:30){
+    player_data$attack_angle <- possible_attack
+    #Get their predicted batting average for that attack angle
+    pred_ba <- predict(ba_model, newdata = player_data)
+    #print(pred_ba)
+    #Get the probability they hit any of the balls they were pitched with that attack angle
+    probs_of_hit <- predict(hit_model, newdata = player_data, type = "response")
+    #print(probs_of_hit)
+    player_data$prob_of_hit <- probs_of_hit
+    #Find the number of hits to sample from the overall data
+    num_to_sample <- round((pred_ba[1]*nrow(player_data)))
+    #print(num_to_sample)
+    #Sample based on the number and probabilities
+    sample <- sample(1:nrow(player_data), num_to_sample[1], replace = TRUE, prob = player_data$prob_of_hit)
+    las <- player_data[sample,] %>% select(launch_angle)
+    lss <- player_data[sample,] %>% select(launch_speed)
+    heights <- player_data[sample,] %>% select(plate_z)
+    
+    possible_attack_vec <- c(possible_attack_vec, rep(possible_attack, times = num_to_sample))
+    launch_angles <- c(launch_angles, las)
+    print(launch_angles)  #don't think this is accumulating the way we want it to?
+    launch_speeds <- c(launch_speeds, lss)
+    pitch_heights <- c(pitch_heights, heights)
+  }
+  return (tibble(possible_attack = possible_attack_vec, launch_angle = launch_angles, 
+                launch_speed = launch_speeds, plate_z = pitch_heights)) #why is launch_angle always of 
+                                                #size 31 when launch_angles has stuff in it
+}
+
+mtrout <- batter_all_2019_logit %>%
+  filter(player_name == "Trout, Mike")
+
+mtrout_sample_hits <- get_sample_hits(init_avg_model, init_logit, mtrout)
+
+#Function from previous presentation
+test_all_attack <- function(woba_model, LA_model, player_data, orig_attack){
+  
+  # Initialize vectors for results
+  original_attack <- c(rep(orig_attack[1], times=31))
+  original_woba <- c(rep(mean(player_data$woba_value, na.rm = TRUE), times = 31))
+  possible_attack_vec <- c(0:30)
+  predicted_woba <- c()
+  avg_predicted_woba <- c()
+  
+  for(possible_attack in 0:30){
+    # Repeat 10 times
+    for(n in 1:10){
+      EV_vector4 <- vector()    # To hold launch speeds for this function
+      
+      # Find the possible launch angle for this attack angle
+      player_data$attack_angle <- possible_attack
+      pred_angles <- tibble(lm.preds = predict(LA_model, newdata = player_data))
+      pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                          sd = sigma(LA_model)), 
+                                            launch_angle = lm.preds + noise)
+      
+      for(i in 1:length(pred_angles$launch_angle)){
+        # Sample a launch speed around their actual attack angle
+        hits_at_angle <- player_data %>% 
+          filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                   orig_attack-3 & !is.na(launch_speed))
+        # Randomly sample 1 exit velocity form similar hits
+        EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+        pred_EV <- hits_at_angle[EV_sample_index,] 
+        # Add that launch speed to vector as the predicted launch speed 
+        EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+      }
+      
+      # Create modeled data for this attack angle
+      modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+      preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+      xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+      
+      predicted_woba <- c(predicted_woba, xwOBA)
+    }
+    avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+  }
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
+}
