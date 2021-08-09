@@ -7,6 +7,7 @@
 #Loading Libraries
 library(tidyverse)
 library(plotly)
+library(broom)
 '%!in%' <- Negate('%in%')
 
 #Loading Data
@@ -162,7 +163,6 @@ contact_dataset <- batted_balls %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
          woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
-  mutate(contact = as.factor(contact)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 # Scatterplot of attack angle versus pitch height colored by if contact was made. 
@@ -170,31 +170,41 @@ contact_dataset %>%
   ggplot(aes(x=attack_angle, y=plate_z, color = contact))+
   geom_point()
 
-# Create training and test datasets. 
-set.seed(88)
+# Create another training and test dataset from the contact_dataset. This time, group by player and year so that all the pitches
+#that a player swung at in a season are in either the test or train dataset. 
+player_year <- contact_dataset %>%
+  group_by(player_name, year) %>%
+  count()
 
-nrow(contact_dataset)*0.75
-sample_rows <- sample(nrow(contact_dataset), 1132744)
+set.seed(211)
 
-contact_train <- contact_dataset[sample_rows,]
-contact_test <- contact_dataset[-sample_rows,]
+nrow(player_year)*0.75
+sample_rows2 <- sample_rows <- sample(nrow(player_year), 1972)
+
+player_year_train <- player_year[sample_rows2,]
+player_year_test <- player_year[-sample_rows2,]
+
+contact_py_train <- contact_dataset %>%
+  right_join(player_year_train, by = c("player_name", "year"))
+contact_py_test <- contact_dataset %>%
+  right_join(player_year_test, by = c("player_name", "year"))
 
 # Create the logistic model. Predict whether contact will be made given a player's attack angle and 
 #the height of the pitch. 
-k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_train, family = "binomial")
+k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_py_train, family = "binomial")
 summary(k_mod2)
 exp(coef(k_mod2))
 
 # Test the model on the test dataset. I played around with the threshold to split at and found that 
 #0.36 seemed to maximize the overall accuracy of the model (0.797). The average rate of contact 
 #is 0.765 in the contact_test dataset. 
-contact_test$prob <- predict(k_mod2, contact_test, type = "response")
-contact_test$pred[contact_test$prob >= .29] = 1
-contact_test$pred[contact_test$prob < .29] = 0
-contact_test$pred[is.na(contact_test$prob)] = 0
+contact_py_test$prob <- predict(k_mod2, contact_py_test, type = "response")
+contact_py_test$pred[contact_py_test$prob >= .36] = 1
+contact_py_test$pred[contact_py_test$prob < .36] = 0
+contact_py_test$pred[is.na(contact_py_test$prob)] = 0
 
 # Compute the overall accuracy of the simpler tree
-mean(contact_test$pred == contact_test$contact) 
+mean(contact_py_test$pred == contact_py_test$contact) 
 
 # Create side by side boxplots for the predicted probability. 
 k_mod2 %>%
@@ -207,7 +217,7 @@ k_mod2 %>%
 
 # Create the confusion matrix and compute the accuracy of both predicting swings and misses 
 #and also hit into play. With the threshold that maximized of the overall accuracy (0.36), the accuracy
-#of predicting the "rare" event of swing and miss is very low at 0.198. 
+#of predicting the "rare" event of swing and miss is very low at 0.197. 
 threshold <- 0.36
 k_mod2 %>%
   augment(type.predict = "response") %>%
@@ -216,7 +226,7 @@ k_mod2 %>%
 
 # Therefore, we should further lower the threshold in order to increase the probability of predicting the 
 #rare event correctly. With a threshold of 0.285, the model predicts 84.18% of contact correctly and 
-#41.6% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.5%. 
+#41.7% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.55%. 
 threshold <- 0.285
 k_mod2 %>%
   augment(type.predict = "response") %>%
@@ -228,24 +238,31 @@ k_mod2 %>%
 # BASED ON THE PREVIOUS MODEL: VISUALIZATIONS AND ACCURACY 
 
 #Visualization of attack angle versus pitch height and color by probability of swinging and missing 
-contact_test %>%
+contact_py_test %>%
   ggplot(aes(x=attack_angle, y=plate_z, color = prob))+
   geom_point()
 
-player_exp_swing_miss <- contact_test %>%
+#Let's group by player/year and look at their expected swing-miss average and what they actually got. 
+player_exp_swing_miss <- contact_py_test %>%
   group_by(player_name, year) %>%
-  summarize(player_name, year, attack_angle, exp_swing_miss = mean(prob), number_swings = n()) %>%
-  distinct()
+  summarize(player_name, year, attack_angle, exp_swing_miss = mean(prob)) %>%
+  distinct() %>%
+  left_join(strikeout_eda, by=c("player_name", "year", "attack_angle")) %>%
+  select(player_name, year, attack_angle, exp_swing_miss, swing_miss_percent) %>%
+  pivot_longer(cols = exp_swing_miss:swing_miss_percent, names_to = "predicted", 
+               values_to = "percent") %>%
+  mutate(predicted = case_when(predicted == "exp_swing_miss" ~ "expected", 
+                               predicted == "swing_miss_percent" ~ "actual"))
 
-# notes for this: need to figure out what attack angle to use - it is the attack angle solely from the test
-#data or is it the one from their season total? May want to consider test data that is grouped by player and then
-#test on completely different players/seasons to avoid this. Then I want to plot their actual swing-miss rate from the test 
-#data and compare it to the model predictions, and plot colors on scatterplot. 
+# Create visualization of predicted versus actual swing and miss percentage. It seems like model might not 
+#allow for enough variability in swing-miss percentage. 
 player_exp_swing_miss %>%
-  ggplot(aes(x=attack_angle, y=exp_swing_miss))+
-  geom_point()
+  ggplot(aes(x=attack_angle, y=percent, color = predicted))+
+  geom_point(alpha = 0.7)+
+  theme_minimal()+
+  labs(x="attack angle", y="swing and miss percent", color = "")
 
-
+####################################################################################################################################
 #Ron's model
 k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
 summary(k_probability)
