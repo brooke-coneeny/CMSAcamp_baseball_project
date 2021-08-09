@@ -225,11 +225,26 @@ get_sample_hits <- function(ba_model, hit_model, player_data){
                 cleaned_launch_angle = cleaned_angles, woba_value = woba_values)) 
 }
 
+#Test for Trout
 mtrout <- batter_all_2019_logit %>%
   filter(player_name == "Trout, Mike") %>% clean_edges()
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
 mtrout_sample_hits <- get_sample_hits(init_avg_model, init_logit, mtrout) 
+
+#Test for Heyward
+jhey <- batter_all_2019_logit %>%
+  filter(player_name == "Heyward, Jason") %>% clean_edges()
+jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
+
+jhey_sample_hits <- get_sample_hits(init_avg_model, init_logit, jhey) 
+
+#Test for Kemp
+tkemp <- batter_all_1621_logit %>%
+  filter(player_name == "Kemp, Tony") %>% clean_edges()
+tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
+
+tkemp_sample_hits <- get_sample_hits(init_avg_model, init_logit, tkemp)
 
 #Function from previous presentation
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
@@ -284,6 +299,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
 woba_model<- read_rds("public_data/woba_model.rds")
 predicted_LA <- read_rds("public_data/LA_model.rds")
 
+#Test for Trout
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
 mtrout_attack_angles_plot <- mtrout_woba_values %>%
@@ -295,4 +311,36 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
+
+#Test for Heyward
+jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
+                                             jhey$attack_angle[1], jhey_woba)
+jhey_attack_angles_plot <- jhey_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+                                #Didn't plateau like Trout for some reason
+  theme_bw()+
+  geom_vline(xintercept = jhey$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
+
+#Test for Kemp
+tkemp_woba_values <- test_all_attack_sample(woba_model, predicted_LA, tkemp_sample_hits, tkemp,
+                                             tkemp$attack_angle[1], tkemp_woba)
+
+tkemp_attack_angles_plot <- tkemp_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = tkemp$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Tony Kemp")
+
+
+# Writing a similar function for Erin's model -----------------------------
+
+
 
