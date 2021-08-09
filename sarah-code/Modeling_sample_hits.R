@@ -13,6 +13,8 @@ batter_all_2018 <- read_rds("private_data/all2018data.rds")
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
+woba_model<- read_rds("public_data/woba_model.rds")
+predicted_LA <- read_rds("public_data/LA_model.rds")
 
 '%!in%' <- Negate('%in%')
 
@@ -145,9 +147,10 @@ clean_edges <- function (data){
   return (data)
 }
 
-# Creating initial glm ----------------------------------------------------
+########################################################################################################
 
-init_logit <- glm(is_hit_into_play ~ attack_angle, #+ plate_z + release_speed, 
+#Creating a logistic model to predict whether a hit is in play or not based on attack angle and height
+init_logit <- glm(is_hit_into_play ~ attack_angle + plate_z, 
                   data = batter_all_1621_logit, family = "binomial")
 summary(init_logit)
 
@@ -160,35 +163,23 @@ min(init_logit$fitted.values)
 #I think there are so few hit into play that when you have a a similar attack angle/plate height 
 #combination the not hit into play lowers the prob of a hit
 
-#could we use the low probabilities as the prob of selection and then select the number of balls hit into
-#play based on a modeled batting average for that launch angle?????
+#If we create a model that predicts batting average based on attack angle (coming from the idea that 
+#strikeouts increase with steaper attack angles) then we could use that batting average and total pitches
+#the saw as the number of samples to take and use the probabilities as the sampling probability
 
 avg_and_attack_modeling %>%
   ggplot(aes(x=attack_angle, y=ba))+
-  geom_line() + geom_smooth() 
+  geom_line() + geom_smooth()             #Tells me we need a GAM
 
+#Creating this initial gam for predicting batting average
 init_avg_model <- gam(ba ~ s(attack_angle, k=125), data=avg_and_attack_modeling)
 summary(init_avg_model)
-gam.check(init_avg_model, k.sample = 50000, k.rep = 250)
+gam.check(init_avg_model, k.sample = 50000, k.rep = 250)    #Used this to guess the K value (can do cross
+                                              #validation later to check)
 
+########################################################################################################
 
-# Model strike percentage  ---------------------------------------------
-strike_modeling %>%
-  ggplot(aes(x=attack_angle, y=strike_percent))+
-  geom_line() + geom_smooth() #practically no relationship...so the model is useless
-
-strike_percent_init_model <- lm(strike_percent ~ attack_angle, data=strike_modeling)
-summary(strike_percent_init_model)
-
-
-
-
-
-
-
-# Function to use pred avg,  probs of hit to find wOBA --------------------
-
-#Function that will get the sample of balls in play
+#Function that will get the sample of balls they could have hit into play for each attack angle
 get_sample_hits <- function(ba_model, hit_model, player_data){
   possible_attack_vec <- c()
   launch_angles <- c()
@@ -225,28 +216,10 @@ get_sample_hits <- function(ba_model, hit_model, player_data){
                 cleaned_launch_angle = cleaned_angles, woba_value = woba_values)) 
 }
 
-#Test for Trout
-mtrout <- batter_all_2019_logit %>%
-  filter(player_name == "Trout, Mike") %>% clean_edges()
-mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
-mtrout_sample_hits <- get_sample_hits(init_avg_model, init_logit, mtrout) 
+########################################################################################################
 
-#Test for Heyward
-jhey <- batter_all_2019_logit %>%
-  filter(player_name == "Heyward, Jason") %>% clean_edges()
-jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
-
-jhey_sample_hits <- get_sample_hits(init_avg_model, init_logit, jhey) 
-
-#Test for Kemp
-tkemp <- batter_all_1621_logit %>%
-  filter(player_name == "Kemp, Tony") %>% clean_edges()
-tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
-
-tkemp_sample_hits <- get_sample_hits(init_avg_model, init_logit, tkemp)
-
-#Function from previous presentation
+#Modified function from previous presentation to get predicted wobas for each attack angle
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
   
   # Initialize vectors for results
@@ -296,10 +269,15 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   
 }
 
-woba_model<- read_rds("public_data/woba_model.rds")
-predicted_LA <- read_rds("public_data/LA_model.rds")
+
+########################################################################################################
 
 #Test for Trout
+mtrout <- batter_all_2019_logit %>%
+  filter(player_name == "Trout, Mike") %>% clean_edges()
+mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
+
+mtrout_sample_hits <- get_sample_hits(init_avg_model, init_logit, mtrout) 
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
 mtrout_attack_angles_plot <- mtrout_woba_values %>%
@@ -313,6 +291,11 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
        title = "Mike Trout")
 
 #Test for Heyward
+jhey <- batter_all_2019_logit %>%
+  filter(player_name == "Heyward, Jason") %>% clean_edges()
+jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
+
+jhey_sample_hits <- get_sample_hits(init_avg_model, init_logit, jhey) 
 jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
                                              jhey$attack_angle[1], jhey_woba)
 jhey_attack_angles_plot <- jhey_woba_values %>%
@@ -326,6 +309,11 @@ jhey_attack_angles_plot <- jhey_woba_values %>%
        title = "Jason Heyward")
 
 #Test for Kemp
+tkemp <- batter_all_1621_logit %>%
+  filter(player_name == "Kemp, Tony") %>% clean_edges()
+tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
+
+tkemp_sample_hits <- get_sample_hits(init_avg_model, init_logit, tkemp)
 tkemp_woba_values <- test_all_attack_sample(woba_model, predicted_LA, tkemp_sample_hits, tkemp,
                                              tkemp$attack_angle[1], tkemp_woba)
 
@@ -340,7 +328,6 @@ tkemp_attack_angles_plot <- tkemp_woba_values %>%
        title = "Tony Kemp")
 
 
-# Writing a similar function for Erin's model -----------------------------
 
 
 
