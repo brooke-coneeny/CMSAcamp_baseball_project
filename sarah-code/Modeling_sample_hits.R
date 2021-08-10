@@ -125,26 +125,26 @@ min(init_logit$fitted.values)
 #0.385(same accuracy as .4) seemed to maximize the overall accuracy of the model (0.8253515). The average
 #rate of hit into play is 0.1746485 in the hit_py_test dataset. 
 hit_py_test$prob <- predict(init_logit, hit_py_test, type = "response")
-hit_py_test$pred[hit_py_test$prob >= .385] = 1
-hit_py_test$pred[hit_py_test$prob < .385] = 0
+hit_py_test$pred[hit_py_test$prob >= .19] = 1
+hit_py_test$pred[hit_py_test$prob < .19] = 0
 hit_py_test$pred[is.na(hit_py_test$prob)] = 0
 
 # Compute the overall accuracy of the simpler tree
 mean(hit_py_test$pred == hit_py_test$is_hit_into_play) 
 
 # Create the confusion matrix and compute the accuracy of both predicting swings and misses 
-#and also hit into play. With the threshold that maximized of the overall accuracy (0.36), the accuracy
-#of predicting the "rare" event of swing and miss is very low at 0.197. 
+#and also hit into play. With the threshold that maximized of the overall accuracy (0.385), the accuracy
+#of predicting the "rare" event of hit is VERY low at 2.26E-6. 
 threshold <- 0.385
 init_logit %>%
   augment(type.predict = "response") %>%
   mutate(predict_hit = as.numeric(.fitted >= threshold)) %>%
-  count(is_hit_into_play, predict_hit)      #SOMETHIGN REALLY WEIRD IS HAPPENING HERE
+  count(is_hit_into_play, predict_hit)      
 
 # Therefore, we should further lower the threshold in order to increase the probability of predicting the 
-#rare event correctly. With a threshold of 0.285, the model predicts 84.18% of contact correctly and 
-#41.7% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.55%. 
-threshold <- 0.285
+#rare event correctly. With a threshold of 0.19, the model predicts 82.89% of not hit into play correctly
+#and 11.4% of hit into play correctly. The overall accuracy of the model is a bit lower at 70%. 
+threshold <- 0.19
 init_logit %>%
   augment(type.predict = "response") %>%
   mutate(predict_hit = as.numeric(.fitted >= threshold)) %>%
