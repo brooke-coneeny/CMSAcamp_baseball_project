@@ -163,6 +163,12 @@ contact_dataset <- batted_balls %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
          woba_value, description, description2, events, balls, strikes, plate_z, contact, plate_x, release_speed) %>%
+  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+  mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type), 
+         plate_x = abs(plate_x)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 # Scatterplot of attack angle versus pitch height colored by if contact was made. 
@@ -191,16 +197,17 @@ contact_py_test <- contact_dataset %>%
 
 # Create the logistic model. Predict whether contact will be made given a player's attack angle and 
 #the height of the pitch. 
-k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_py_train, family = "binomial")
+k_mod2 <- glm(contact ~ attack_angle + plate_z + pitch_type + plate_x + release_speed, 
+              data = contact_py_train, family = "binomial")
 summary(k_mod2)
 exp(coef(k_mod2))
 
 # Test the model on the test dataset. I played around with the threshold to split at and found that 
-#0.36 seemed to maximize the overall accuracy of the model (0.797). The average rate of contact 
+#0.41 seemed to maximize the overall accuracy of the model (0.798). The average rate of contact 
 #is 0.765 in the contact_test dataset. 
 contact_py_test$prob <- predict(k_mod2, contact_py_test, type = "response")
-contact_py_test$pred[contact_py_test$prob >= .36] = 1
-contact_py_test$pred[contact_py_test$prob < .36] = 0
+contact_py_test$pred[contact_py_test$prob >= .41] = 1
+contact_py_test$pred[contact_py_test$prob < .41] = 0
 contact_py_test$pred[is.na(contact_py_test$prob)] = 0
 
 # Compute the overall accuracy
@@ -216,18 +223,19 @@ k_mod2 %>%
   theme_classic()
 
 # Create the confusion matrix and compute the accuracy of both predicting swings and misses 
-#and also hit into play. With the threshold that maximized of the overall accuracy (0.36), the accuracy
-#of predicting the "rare" event of swing and miss is very low at 0.197. 
-threshold <- 0.36
+#and also hit into play. With the threshold that maximized of the overall accuracy (0.41), the accuracy
+#of predicting the "rare" event of swing and miss is very low at 18.8%. The accuracy of predicting contact 
+#is high at 97.5%. 
+threshold <- 0.41
 k_mod2 %>%
   augment(type.predict = "response") %>%
   mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
   count(contact, predict_swing_miss)
 
 # Therefore, we should further lower the threshold in order to increase the probability of predicting the 
-#rare event correctly. With a threshold of 0.285, the model predicts 84.18% of contact correctly and 
-#41.7% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.55%. 
-threshold <- 0.285
+#rare event correctly. With a threshold of 0.28, the model predicts 80.52% of contact correctly and 
+#46.87% of swing and misses correctly. The overall accuracy of the model is a bit lower at 73.22%. 
+threshold <- 0.28
 k_mod2 %>%
   augment(type.predict = "response") %>%
   mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
