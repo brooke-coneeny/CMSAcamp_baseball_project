@@ -33,24 +33,28 @@ batter_all <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018,
 
 
 #Creating a column which describes the result of the pitch 
-batter_all <- batter_all %>%
-  mutate(description2 = case_when(
-           description %in% c("automatic_ball", "ball", "blocked_ball", 
-                              "called_strike", "hit_by_pitch", "pitchout") ~ "no_swing", 
-           description %in% c("foul", "foul_tip") ~ "foul",
-           description %in% c("foul_bunt", "missed_bunt", "bunt_foul_tip") ~ "bunting",
-           description %in% c("hit_into_play", "hit_into_play_no_out", "hit_into_play_score") ~ "fair_contact",
-           description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swing_and_miss",
-           TRUE ~ description)
-  )
+batter_all_2019 <- batter_all_2019 %>%
+  mutate(description2 = case_when(description %in% c("ball", "blocked_ball", "intent_ball") ~ "ball", 
+                                  description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
+                                                     "missed_bunt", "pitchout") ~ "other", 
+                                  description %in% c("foul", "foul_tip") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
+                                  TRUE ~ description))
 
 #Finding each player's attack angle in each season
-attack_angles <- batter_all %>%
+attack_angles <- batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
-  group_by(player_name, year) %>% 
+  group_by(player_name) %>% 
   filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
   filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
   summarize(attack_angle = median(launch_angle))
+
+#Finding how many balls each player put in play 
+hit_in_play <- batter_all_2019 %>%
+  group_by(player_name) %>%
+  filter(description == "hit_into_play") %>%
+  count() %>%
+  rename(balls_in_play = n)
 
 ####################################################################################################################################
 
@@ -58,21 +62,21 @@ attack_angles <- batter_all %>%
 #amount of pitches they can hit? 
 
 #Lets only look at pitches they fouled, hit in play, or missed. This means were ignoring pitches they did not swing at 
-#If they swing and miss, there is no contact (0) if they foul or hit in play there is contact (1)
-batter_all <- batter_all %>%
-  filter(description2 %in% c("foul", "fair_contact", "swing_and_miss")) %>%
-  mutate(contact = case_when(description2 == "swing_and_miss" ~ 0, 
-                             description2 %in% c("foul", "fair_contact") ~ 1))
+#If they swing and miss, there is no contact (1) if they foul or hit in play there is contact (0)
+contact_2019 <- batter_all_2019 %>%
+  filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
+  mutate(contact = case_when(description2 == "swinging_strike" ~ 1, 
+                             description2 %in% c("foul", "hit_into_play") ~ 0))
 
 #Combining with the attack angles of each player in each year 
-contact_batter_all <- batter_all %>%
-  left_join(attack_angles, by = c("player_name", "year")) %>%
-  filter(!is.na(launch_speed), !is.na(launch_angle), !is.na(woba_value))
-
-#Creating a logistic regression model which predicts if contact was made based off of attack angle and pitch height 
-init_logit <- glm(contact ~ attack_angle + plate_z,
-                  data = contact_batter_all,
-                  family = "binomial")
+#Combining with number of balls in play by player and year 
+contact_batter_all <- hit_in_play %>%
+  filter(balls_in_play >= 50) %>%
+  left_join(contact_2019, by=c("player_name")) %>%
+  left_join(attack_angles, by = c("player_name")) %>%
+  select(player_name, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
+         woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
+  filter(plate_z <=5 & plate_z >= -2.5)
 
 
 ####################################################################################################################################
@@ -80,24 +84,26 @@ init_logit <- glm(contact ~ attack_angle + plate_z,
 #Creating training and testing data sets for logistic model
 
 #Group by player and year so that all the pitches that a player swung at in a season are in either the test or train data set. 
-player_year <- contact_batter_all%>%
-  group_by(player_name, year) %>%
+player_num_pitches <- contact_batter_all%>%
+  group_by(player_name) %>%
   count()
 
 #75 percent of the sample size
-smp_size <- floor(0.75 * nrow(player_year))
+smp_size <- floor(0.75 * nrow(player_num_pitches))
 
 #Set the seed to make partition reproducible
 set.seed(315)
-sample_rows <- sample(nrow(player_year), size = smp_size)
+sample_rows <- sample(nrow(player_num_pitches), smp_size)
 
-player_year_train <- player_year[sample_rows,]
-player_year_test <- player_year[-sample_rows,]
+player_year_train <- player_num_pitches[sample_rows,]
+player_year_test <- player_num_pitches[-sample_rows,]
 
 contact_train <- contact_batter_all %>%
-  right_join(player_year_train, by = c("player_name", "year"))
+  right_join(player_year_train, by = c("player_name")) %>%
+  mutate(id = row_number())
+
 contact_test <- contact_batter_all %>%
-  right_join(player_year_test, by = c("player_name", "year"))
+  right_join(player_year_test, by = c("player_name"))
 
 #Use training data to predict 
 init_logit <- glm(contact ~ attack_angle + plate_z,
@@ -105,15 +111,16 @@ init_logit <- glm(contact ~ attack_angle + plate_z,
                   family = "binomial")
 
 #Viewing predicted probability relationship
-contact_train %>%
-  mutate(pred_prob = init_logit$fitted.values) %>%
-  ggplot(aes(x = attack_angle)) +
-  geom_line(aes(y = pred_prob),
-            color = "blue") +
-  geom_point(aes(y = contact),
-             alpha = 0.3,
-             color = "darkorange") +
-  theme_bw()
+logit_results <- as.data.frame(init_logit$fitted.values) %>%
+  mutate(id = row_number())
+
+logit_results <- logit_results %>%
+  left_join(contact_train, by = c("id")) %>%
+  select("player_name", "init_logit$fitted.values", "attack_angle", "plate_z", "contact") 
+
+logit_plot <- logit_results %>%
+  ggplot(aes(x = attack_angle, y = init_logit$fitted.values)) +
+  geom_point()
 
 
 ####################################################################################################################################
