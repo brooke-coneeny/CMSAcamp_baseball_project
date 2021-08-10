@@ -162,7 +162,13 @@ contact_dataset <- batted_balls %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
-         woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
+         woba_value, description, description2, events, balls, strikes, plate_z, contact, plate_x, release_speed) %>%
+  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+  mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type), 
+         plate_x = abs(plate_x)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 # Scatterplot of attack angle versus pitch height colored by if contact was made. 
@@ -191,43 +197,45 @@ contact_py_test <- contact_dataset %>%
 
 # Create the logistic model. Predict whether contact will be made given a player's attack angle and 
 #the height of the pitch. 
-k_mod2 <- glm(contact ~ attack_angle + plate_z, data = contact_py_train, family = "binomial")
+k_mod2 <- glm(contact ~ attack_angle + plate_z + pitch_type + plate_x + release_speed, 
+              data = contact_py_train, family = "binomial")
 summary(k_mod2)
 exp(coef(k_mod2))
 
 # Test the model on the test dataset. I played around with the threshold to split at and found that 
-#0.36 seemed to maximize the overall accuracy of the model (0.797). The average rate of contact 
+#0.41 seemed to maximize the overall accuracy of the model (0.798). The average rate of contact 
 #is 0.765 in the contact_test dataset. 
 contact_py_test$prob <- predict(k_mod2, contact_py_test, type = "response")
-contact_py_test$pred[contact_py_test$prob >= .36] = 1
-contact_py_test$pred[contact_py_test$prob < .36] = 0
+contact_py_test$pred[contact_py_test$prob >= .41] = 1
+contact_py_test$pred[contact_py_test$prob < .41] = 0
 contact_py_test$pred[is.na(contact_py_test$prob)] = 0
 
-# Compute the overall accuracy of the simpler tree
+# Compute the overall accuracy
 mean(contact_py_test$pred == contact_py_test$contact) 
 
 # Create side by side boxplots for the predicted probability. 
 k_mod2 %>%
   augment(type.predict = "response") %>%
-  ggplot(aes(y = .fitted, x = contact)) + 
+  ggplot(aes(y = .fitted, x = contact, group = contact)) + 
   geom_boxplot() + 
   ylab("Predicted probability of swing and miss") + 
   xlab("Acutal contact (1 = missed, 0 = fouled/hit into play") + 
   theme_classic()
 
 # Create the confusion matrix and compute the accuracy of both predicting swings and misses 
-#and also hit into play. With the threshold that maximized of the overall accuracy (0.36), the accuracy
-#of predicting the "rare" event of swing and miss is very low at 0.197. 
-threshold <- 0.36
+#and also hit into play. With the threshold that maximized of the overall accuracy (0.41), the accuracy
+#of predicting the "rare" event of swing and miss is very low at 18.8%. The accuracy of predicting contact 
+#is high at 97.5%. 
+threshold <- 0.41
 k_mod2 %>%
   augment(type.predict = "response") %>%
   mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
   count(contact, predict_swing_miss)
 
 # Therefore, we should further lower the threshold in order to increase the probability of predicting the 
-#rare event correctly. With a threshold of 0.285, the model predicts 84.18% of contact correctly and 
-#41.7% of swing and misses correctly. The overall accuracy of the model is a bit lower at 74.55%. 
-threshold <- 0.285
+#rare event correctly. With a threshold of 0.28, the model predicts 80.52% of contact correctly and 
+#46.87% of swing and misses correctly. The overall accuracy of the model is a bit lower at 73.22%. 
+threshold <- 0.28
 k_mod2 %>%
   augment(type.predict = "response") %>%
   mutate(predict_swing_miss = as.numeric(.fitted >= threshold)) %>%
@@ -257,11 +265,97 @@ player_exp_swing_miss <- contact_py_test %>%
 # Create visualization of predicted versus actual swing and miss percentage. It seems like model might not 
 #allow for enough variability in swing-miss percentage. 
 player_exp_swing_miss %>%
+  #head(20) %>%
   ggplot(aes(x=attack_angle, y=percent, color = predicted))+
   geom_point(alpha = 0.7)+
   theme_minimal()+
   labs(x="attack angle", y="swing and miss percent", color = "")
 
+####################################################################################################################################
+# MODEL 3: WHETHER OR NOT THE BALL WAS HIT INTO PLAY
+# Create a logistic model in a similar process, this time just whether the ball was hit into play (1) or
+#fouled/missed (0). 
+
+# create the contact_batted_balls2 dataset. Assign 1 if the ball was hit into play and 0 if it swung at but not 
+#hit into play. 
+contact_batted_balls2 <- batter_all_1621 %>%
+  filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
+  mutate(hit_into_play = case_when(description2 == "hit_into_play" ~ 1, 
+                             description2 %in% c("foul", "swinging_strike") ~ 0))
+
+# create the contact_dataset2. This time, create a variable for pitch type that denotes whether a pitch is breaking, 
+#offspeed, or a fastball. Additionally, take the absolute value of plate_x so that it we aren't dealing with 
+#inside versus outside for lefties versus righties, etc. 
+contact_dataset2 <- batted_balls %>%
+  filter(balls_in_play >= 50) %>%
+  left_join(contact_batted_balls2, by=c("year", "player_name")) %>%
+  left_join(attack_angles, by = c("year", "player_name")) %>%
+  select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
+         woba_value, description, description2, events, balls, strikes, plate_z, hit_into_play, plate_x, release_speed) %>%
+  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+  mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type), 
+         plate_x = abs(plate_x)) %>%
+  filter(plate_z <=5 & plate_z >= -2.5)
+
+# Create training and test dataset from the contact_dataset2. Group by player and year so that all the pitches
+#that a player swung at in a season are in either the test or train dataset. 
+player_year2 <- contact_dataset2 %>%
+  group_by(player_name, year) %>%
+  count()
+
+set.seed(23)
+
+nrow(player_year2)*0.75
+row_nums <- sample(nrow(player_year2), 1972)
+
+hit_into_play_train <- player_year2[row_nums,]
+hit_into_play_test <- player_year2[-row_nums,]
+
+hit_into_play_train_data <- contact_dataset2 %>%
+  right_join(hit_into_play_train, by = c("player_name", "year"))
+hit_into_play_test_data <- contact_dataset2 %>%
+  right_join(hit_into_play_test, by = c("player_name", "year"))
+
+# Create the logistic model. Predict whether the ball will be hit into play based on the attack angle, height of pitch, 
+#how far from the middle of the plate the pitch was, the pitch speed, and pitch type. 
+hp_log_mod <- glm(hit_into_play ~ attack_angle + plate_z + plate_x + release_speed + pitch_type, 
+                  data = hit_into_play_train_data, family = "binomial")
+summary(hp_log_mod)
+exp(coef(hp_log_mod))
+confint(hp_log_mod) %>%
+  exp()
+
+# Test the model on the test dataset. I played around with the threshold to split at and found that 
+#0.36 seemed to maximize the overall accuracy of the model (0.797). On average in the test dataset, 37.5% of
+#piches swung at are hit into play. 
+hit_into_play_test_data$prob <- predict(hp_log_mod, hit_into_play_test_data, type = "response")
+hit_into_play_test_data$pred[hit_into_play_test_data$prob >= .385] = 1
+hit_into_play_test_data$pred[hit_into_play_test_data$prob < .385] = 0
+hit_into_play_test_data$pred[is.na(hit_into_play_test_data$prob)] = 0
+
+# Compute the overall accuracy
+mean(hit_into_play_test_data$pred == hit_into_play_test_data$hit_into_play)
+
+# Create side by side boxplots for the predicted probability. 
+hp_log_mod %>%
+  augment(type.predict = "response") %>%
+  ggplot(aes(y = .fitted, x = hit_into_play, group = hit_into_play)) + 
+  geom_boxplot() + 
+  ylab("Predicted probability of hit into play") + 
+  xlab("Acutal contact (1 = hit into play, 0 = foul/miss") + 
+  theme_classic()
+
+# Create the confusion matrix and compute the accuracy predictions when predicting the ball was hit into play
+#and not hit into play. It seems like the threshold that best balances the accuracy is 0.385. It correctly predicted 
+#54.9% of the balance fouled/missed correctly and 53.8% of the balls hit into play correctly. 
+threshold <- 0.385
+hp_log_mod %>%
+  augment(type.predict = "response") %>%
+  mutate(predict_hit_into_play = as.numeric(.fitted >= threshold)) %>%
+  count(hit_into_play, predict_hit_into_play)
 ####################################################################################################################################
 #Ron's model
 k_probability <- glm(cbind(K, n_pa-K)~attack_angle, family="binomial", data=strikeout_eda)
