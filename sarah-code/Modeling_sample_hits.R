@@ -1,5 +1,22 @@
-#Creating a model to determine if a ball will be hit into play based on the swing plane and how the ball
-#comes in
+########################################################################################################
+#Overall goals: find a way to get a different set of pitches that the player might have hit at each 
+#attack angle (things to consider - might swing at different pitches at different attack angles, 
+#different total number of pitches hit at each attack angle, likelihood of hit different at different 
+#attack angle)
+########################################################################################################
+
+########################################################################################################
+#Step by step goals:
+  #--> potentially create a model that predicts swingability of a pitch (because some you just so 
+    #obviously don't swing at)
+  #create a GAM that predicts probability of contact for any pitch given attack angle (and other params)
+    #based on only the pitches they swung at
+  #create a GAM that predicts probability of foul or in play for any of the contact pitches above?
+  #need to sample pitches that might be hit into play (likely using the batting average model to predict
+    #total balls in play for an attack angle) !!this one might need to account for great/poor players
+  #once we FINALLY have a set of pitches that they hit over the season for that attack angle, we get 
+    #the launch angles for these pitches and pass it all into the wOBA calculation to get the graph!
+########################################################################################################
 
 library(tidyverse)
 library(mgcv)
