@@ -163,9 +163,7 @@ contact_dataset <- batted_balls %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
-<<<<<<< HEAD
          woba_value, description, description2, events, balls, strikes, plate_z, contact, plate_x, release_speed, pfx_z) %>%
->>>>>>> 86c835d15997d4bb5a278b18235a2ab05500e0cb
   filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
