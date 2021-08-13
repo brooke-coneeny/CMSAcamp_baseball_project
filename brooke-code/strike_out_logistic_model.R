@@ -9,6 +9,7 @@ library(tidyverse)
 library(caret)
 library(e1071)
 library(ROCR)
+library(ROCit)
 
 #Loading Data 
 batter_all_2016 <- read_rds("private_data/all2016data.rds")
@@ -78,8 +79,6 @@ contact_batter_all <- hit_in_play %>%
   filter(balls_in_play >= 50) %>%
   left_join(contact_all, by=c("player_name", "year")) %>%
   left_join(attack_angles, by = c("player_name", "year")) %>%
-  select(player_name, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
-         woba_value, description, description2, events, balls, strikes, plate_z, contact) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 
@@ -103,13 +102,13 @@ player_year_train <- player_num_pitches[sample_rows,]
 player_year_test <- player_num_pitches[-sample_rows,]
 
 contact_train <- contact_batter_all %>%
-  right_join(player_year_train, by = c("player_name")) 
+  right_join(player_year_train, by = c("player_name", "year")) 
 
 contact_test <- contact_batter_all %>%
-  right_join(player_year_test, by = c("player_name")) 
+  right_join(player_year_test, by = c("player_name", "year")) 
 
 #Use training data to predict 
-init_logit <- glm(contact ~ attack_angle + plate_z,
+init_logit <- glm(contact ~ attack_angle + plate_z + plate_x + release_speed,
                   data = contact_train,
                   family = "binomial")
 
@@ -127,15 +126,28 @@ hit_pred$contact <- ifelse(hit_pred[1] < threshold, 0, 1)
 hit_pred$contact <- as.factor(hit_pred$contact)
 
 #Creating confusion matrix
+#Accuracy ~ 0.52
 contact_test$contact <- as.factor(contact_test$contact)
 cfm <- confusionMatrix(contact_test$contact, hit_pred$contact)
 
-#Calculate sensitivity ~ 0.6425 
+#Calculate sensitivity ~ 0.641
 sensitivity(contact_test$contact, hit_pred$contact)
 
-#Calculate specificity ~ 0.3899
+#Calculate specificity ~ 0.403
 specificity(contact_test$contact, hit_pred$contact)
 
-#Calculate total misclassification rate ~ 0.48
+#Calculate total misclassification rate ~ 0.478
 mis_class_rate <- mean(hit_pred$contact != contact_test$contact)
+
+#Creating the class and score for ROC plot
+class <- init_logit$y
+score <- init_logit$fitted.values
+
+#Plotting ROC curve ~ this curve is not ideal, we want it to reach the top left corner but as as can see it 
+#is very close to the middle line
+ROCit_obj <- rocit(score = score,
+                   class = class)
+plot(ROCit_obj)
+
+
 
