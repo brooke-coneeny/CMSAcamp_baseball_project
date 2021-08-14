@@ -1,5 +1,8 @@
 ####################################################################################################################################
-#This file intends to model swing and miss probability based on different launch angles. 
+#This file intends to model swing and miss probability based on different launch angles (in other words, predicting
+#whether or not contact will be made on a given swing). We start this file by looking at a little EDA between vertical 
+#pitch movement and swing and miss rate at different attack angles. We then build a GAM to model the probability of contact 
+#based on attack angle, vertical pitch movement and horizontal pitch location, release speed, and pitch height. 
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -41,79 +44,14 @@ batter_all_1621 <- batter_all_1621 %>%
                                   description %in% c("foul", "foul_tip") ~ "foul", 
                                   description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
                                   TRUE ~ description))
-####################################################################################################################################
 
-#CREATE THE MAIN DATASET 
-
-# I want a dataset that shows a player's attack angle (their median launch angle) in their top 10% of 
-#exit velocities) for each season where they have at least 50 batted balls, their average launch angle 
-#in each season, their number of plate appearances and number of batted balls, number of 
-#strikeouts/strikeout percentage, and wOBA. 
-
-#find each player's attack angle in each season
-attack_angles <- batter_all_1621 %>%
-  filter(description == "hit_into_play") %>%
-  group_by(player_name, year) %>% 
-  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
-  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
-  summarize(attack_angle = median(launch_angle))
-
-#find each player's launch angle in each season
-launch_angles <- batter_all_1621 %>%
-  filter(description == "hit_into_play") %>%
-  group_by(player_name, year) %>% 
-  filter(launch_speed <= 120)%>%
-  summarize(avg_launch_angle = mean(launch_angle, na.rm = TRUE))
-
-#find each player's number of plate appearances
-plate_appearances <- batter_all_1621 %>%
-  mutate(PA_id = paste(game_pk, at_bat_number, sep = "-")) %>%
-  group_by(player_name, year) %>%
-  summarise(n_pa = length(unique(PA_id)))
-
-#find number of batted balls for each player
-batted_balls <- batter_all_1621 %>%
-  group_by(player_name, year) %>%
-  filter(description == "hit_into_play") %>%
-  count() %>%
-  rename(balls_in_play = n)
-
-#find each player's number of strikeouts
-strikeouts <- batter_all_1621 %>%
-  group_by(player_name, year) %>%
-  filter(events %in% c("strikeout", "strikeout_double_play")) %>%
-  count() %>%
-  rename(K=n)
-
-#find each player's rate of swing and misses out of all balls they swing at
-swing_and_miss <- batter_all_1621 %>%
-  group_by(player_name, year, description2) %>%
-  count() %>%
-  pivot_wider(id_cols = player_name:year, names_from = description2, values_from = n) %>%
-  mutate(contact = hit_into_play + foul) %>%
-  select(player_name, year, swinging_strike, contact, swinging_strike)
-
-#find each player's wOBA each season
-wOBAs <-  batter_all_1621 %>%
-  group_by(player_name, year) %>%
-  summarize(woba = mean(woba_value, na.rm = TRUE))
-
-#create joined data set
-strikeout_eda <- plate_appearances %>%
-  left_join(strikeouts, by = c("player_name", "year")) %>%
-  left_join(attack_angles, by=c("player_name", "year")) %>%
-  left_join(launch_angles, by=c("player_name", "year")) %>%
-  left_join(wOBAs, by = c("player_name", "year")) %>%
-  left_join(batted_balls, by = c("player_name", "year")) %>%
-  left_join(swing_and_miss, by = c("player_name", "year")) %>%
-  mutate(k_percent = K/n_pa) %>%
-  filter(balls_in_play >=50)
-
+batted_balls <- read_rds("public_data/batted_balls.rds")
+strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
 ####################################################################################################################################
 # A little bit of EDA on approach angle and attack angle versus strikeout rate
 
 # Filter for balls that were swung at in the dataset with all pitches between 2016 and 2021. Denote pitches that 
-#were missed with a 1 (the "succcess" in this GAM model is a swing and miss) and denote pitches that some kind 
+#were missed with a 1 (the "success" in this GAM model is a swing and miss) and denote pitches that some kind 
 #of contact was made with a 0 (fouls, hit into play). 
 contact_batted_balls <- batter_all_1621 %>%
   filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
@@ -212,8 +150,8 @@ contact_py_test <- contact_dataset %>%
 #               data = contact_py_train, family = "binomial", method = "REML")
 # summary(contact_gam)
 
-write_rds(contact_gam, "public_data/contact_gam_model.rds")
-contact_gam <- read_rds("public_data/contact_gam_model.rds")
+write_rds(contact_gam, "private_data/contact_gam_model.rds")
+contact_gam <- read_rds("private_data/contact_gam_model.rds")
 
 # Test the model on the test dataset. I played around with the threshold to split at and found that 
 #0.48 seemed to maximize the overall accuracy of the model (0.80696). The average rate of contact 

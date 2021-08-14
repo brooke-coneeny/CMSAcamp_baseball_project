@@ -1,5 +1,8 @@
 ####################################################################################################################################
-#This file intends to model swing and miss probability based on different launch angles. 
+# This file intends to model swing and miss probability based on different launch angles. In this file we begin by 
+#creating a general model to predict swing and miss probability based on attack angle. We then build two models - one that 
+#predicts the probability of contact being made, and one that predicts the probability of a ball being hit into play. 
+#These are logistic models. Later on, we explore these same types of models with GAMs. 
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -108,12 +111,16 @@ strikeout_eda <- plate_appearances %>%
   mutate(k_percent = K/n_pa) %>%
   filter(balls_in_play >=50)
 
+#Write files to the public data folder
+write_rds(strikeout_eda, "public_data/strikeout_eda.rds")
+write_rds(batted_balls, "public_data/batted_balls.rds")
+
 ####################################################################################################################################
 
 #LOGISTIC MODEL (GENERAL) FOR ATTACK ANGLE VS SWING & MISS RATE
 
 #Create a scatterplot to show the general relationship. This uses data where 
-#each row represents one season for player's with at least 50 batted balls and their number of swing and misses and 
+#each row represents one season for players with at least 50 batted balls and their number of swing and misses and 
 #number of swings where they make some kind of contact (either foul, foul tip, or hit into play) are listed. 
 strikeout_eda <- strikeout_eda %>%
   mutate(swing_miss_percent = swinging_strike / (swinging_strike + contact))
@@ -143,12 +150,11 @@ attack_preds %>%
   theme_minimal()
 
 ####################################################################################################################################
-
 # ANOTHER MODEL: trying to model probability of a swing and miss given attack angle, 
 #height of pitch, pitch x coordinate, release speed, and pitch type. 
 
 # Filter for balls that were swung at in the dataset with all pitches between 2016 and 2021. Denote pitches that 
-#were missed with a 1 (the "succcess" in this logistic model is a swing and miss) and denote pitches that some kind 
+#were missed with a 1 (the "success" in this logistic model is a swing and miss) and denote pitches that some kind 
 #of contact was made with a 0 (fouls, hit into play). 
 contact_batted_balls <- batter_all_1621 %>%
   filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
@@ -243,7 +249,6 @@ k_mod2 %>%
   count(contact, predict_swing_miss)
 
 ####################################################################################################################################
-
 # BASED ON THE PREVIOUS MODEL: VISUALIZATIONS AND ACCURACY 
 
 #Visualization of attack angle versus pitch height and color by probability of swinging and missing 
@@ -326,12 +331,11 @@ hp_log_mod <- glm(hit_into_play ~ attack_angle + plate_z + plate_x + release_spe
                   data = hit_into_play_train_data, family = "binomial")
 summary(hp_log_mod)
 exp(coef(hp_log_mod))
-confint(hp_log_mod) %>%
-  exp()
+#confint(hp_log_mod) %>%
+#  exp()
 
-# Test the model on the test dataset. I played around with the threshold to split at and found that 
-#0.36 seemed to maximize the overall accuracy of the model (0.797). On average in the test dataset, 37.5% of
-#piches swung at are hit into play. 
+# Test the model on the test dataset. The threshold I chose (explained below) has an overall accuracy for the model 
+# of 54.7%. This is likely because its really hard to differentiate between foul and fair balls. 
 hit_into_play_test_data$prob <- predict(hp_log_mod, hit_into_play_test_data, type = "response")
 hit_into_play_test_data$pred[hit_into_play_test_data$prob >= .385] = 1
 hit_into_play_test_data$pred[hit_into_play_test_data$prob < .385] = 0
