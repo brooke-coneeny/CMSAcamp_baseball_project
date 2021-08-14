@@ -10,6 +10,7 @@ library(caret)
 library(e1071)
 library(ROCR)
 library(ROCit)
+library(mgcv)
 
 #Loading Data 
 batter_all_2016 <- read_rds("private_data/all2016data.rds")
@@ -149,5 +150,68 @@ ROCit_obj <- rocit(score = score,
                    class = class)
 plot(ROCit_obj)
 
+####################################################################################################################################
+
+#Creating training and testing data sets for gam model
+
+#Group by player and year so that all the pitches that a player swung at in a season are in either the test or train data set. 
+player_num_pitches <- contact_batter_all%>%
+  group_by(player_name, year) %>%
+  count()
+
+#75 percent of the sample size
+smp_size <- floor(0.75 * nrow(player_num_pitches))
+
+#Set the seed to make partition reproducible
+set.seed(315)
+sample_rows <- sample(nrow(player_num_pitches), smp_size)
+
+player_year_train <- player_num_pitches[sample_rows,]
+player_year_test <- player_num_pitches[-sample_rows,]
+
+contact_train <- contact_batter_all %>%
+  right_join(player_year_train, by = c("player_name", "year")) 
+
+contact_test <- contact_batter_all %>%
+  right_join(player_year_test, by = c("player_name", "year")) 
+
+#Creating a GAM model which predicts probability of contact for any given hit given attack angle and pitch height
+#using only pitches they swung at 
+contact_model <- gam(contact ~ s(attack_angle) + s(plate_z), 
+                  data = contact_train, family = "binomial", method = "REML")
+
+#Finding predicted values from test data, assigning an ID so we can add column to contact_test
+contact_prob = predict(contact_model, contact_test, type = "response"))
+
+contact_prob <- data.frame(contact_prob) %>%
+  mutate(ID = row_number())
+
+#Creating ID for this data table so we can merge it with contact prob by Id
+contact_test <- contact_test %>%
+  mutate(ID = row_number())
+
+contact_test <- contact_test %>%
+  left_join(contact_prob, by = "ID") 
+
+####################################################################################################################################
+
+#create a GAM that predicts probability of foul or in play for any of the contact pitches above?
+#need to sample pitches that might be hit into play (likely using the batting average model to predict
+#total balls in play for an attack angle) !!this one might need to account for great/poor players
+
+#creating the median probability of contact as the threshold for the moment 
+contact_threshold <- median(contact_test$contact_prob)
+
+#pred_contact determines if they made contact or not based off the threshold 
+#if it was less than median chance of contact than 0 for no contact, otherwise 1 for contact 
+contact_test <- contact_test %>%
+  mutate(pred_contact = case_when(contact_prob < contact_threshold ~ 0, 
+                                  contact_prob >= contact_threshold ~ 1)) 
 
 
+########################################################################################################
+
+#once we FINALLY have a set of pitches that they hit over the season for that attack angle, we get 
+#the launch angles for these pitches and pass it all into the wOBA calculation to get the graph!
+
+########################################################################################################
