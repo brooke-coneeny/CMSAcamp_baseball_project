@@ -77,6 +77,14 @@ contact_batted_balls <- batter_all_1621 %>%
   mutate(contact = case_when(description2 == "swinging_strike" ~ 1, 
                              description2 %in% c("foul", "hit_into_play") ~ 0))
 
+#find each player's attack angle in each season
+attack_angles <- batter_all_1621 %>%
+  filter(description == "hit_into_play") %>%
+  group_by(player_name, year) %>% 
+  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
+  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
+  summarize(attack_angle = median(launch_angle))
+
 # Create the contact dataset. This takes all pitches that were swung at from above, and assigns it the player's attack 
 #angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
 #balls in a given season. Additionally, make contact a factor (0 or 1) and filter for pitches with a height less than 
