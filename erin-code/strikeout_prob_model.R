@@ -114,6 +114,7 @@ strikeout_eda <- plate_appearances %>%
 #Write files to the public data folder
 write_rds(strikeout_eda, "public_data/strikeout_eda.rds")
 write_rds(batted_balls, "public_data/batted_balls.rds")
+write_rds(attack_angles, "public_data/attack_angles_1621.rds")
 
 ####################################################################################################################################
 

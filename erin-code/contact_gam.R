@@ -47,6 +47,7 @@ batter_all_1621 <- batter_all_1621 %>%
 
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
+attack_angles <- read_rds("public_data/attack_angles_1621.rds")
 ####################################################################################################################################
 # A little bit of EDA on approach angle and attack angle versus strikeout rate
 
