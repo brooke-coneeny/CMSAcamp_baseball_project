@@ -56,9 +56,9 @@ batter_all_1621 <- batter_all_1621 %>%
                                   description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
                                   TRUE ~ description),
          #Using Adam's recommended physics equations to calculate the approach angle of the pitch
-         #These should be negative???
-         approach_angle = atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
-                                 (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi)
+         #Negative because of the direction of v and a vectors
+         approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
+                                 (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
 
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
