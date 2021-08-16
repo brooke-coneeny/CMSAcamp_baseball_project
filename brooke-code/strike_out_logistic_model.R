@@ -159,39 +159,26 @@ player_num_pitches <- contact_batter_all%>%
   group_by(player_name, year) %>%
   count()
 
-#75 percent of the sample size
-smp_size <- floor(0.75 * nrow(player_num_pitches))
-
-#Set the seed to make partition reproducible
-set.seed(315)
-sample_rows <- sample(nrow(player_num_pitches), smp_size)
-
-player_year_train <- player_num_pitches[sample_rows,]
-player_year_test <- player_num_pitches[-sample_rows,]
-
-contact_train <- contact_batter_all %>%
-  right_join(player_year_train, by = c("player_name", "year")) 
-
-contact_test <- contact_batter_all %>%
-  right_join(player_year_test, by = c("player_name", "year")) 
-
 #Creating a GAM model which predicts probability of contact for any given hit given attack angle and pitch height
 #using only pitches they swung at 
 contact_model <- gam(contact ~ s(attack_angle) + s(plate_z), 
-                  data = contact_train, family = "binomial", method = "REML")
+                  data = contact_batter_all, family = "binomial", method = "REML")
 
-#Finding predicted values from test data, assigning an ID so we can add column to contact_test
-contact_prob = predict(contact_model, contact_test, type = "response"))
+#Selecting only the variables we are interested in 
+contact_data <- contact_batter_all %>%
+  select("player_name", "year", "attack_angle", "plate_z", "launch_angle", "launch_speed") %>%
+  filter(!is.na(launch_angle), !is.na(launch_speed)) %>%
+  mutate(row_ID = row_number())
 
-contact_prob <- data.frame(contact_prob) %>%
-  mutate(ID = row_number())
+#Finding predicted values, assigning an ID so we can add column to contact_data 
+contact_prob <- data.frame(predict(contact_model, contact_data, type = "response"))
+names(contact_prob)[1] <- "contact_prob"
 
-#Creating ID for this data table so we can merge it with contact prob by Id
-contact_test <- contact_test %>%
-  mutate(ID = row_number())
+contact_prob <- contact_prob %>%
+  mutate(row_ID = row_number())
 
-contact_test <- contact_test %>%
-  left_join(contact_prob, by = "ID") 
+contact_data <- contact_data %>% 
+  left_join(contact_prob, by = "row_ID") 
 
 ####################################################################################################################################
 
@@ -200,11 +187,11 @@ contact_test <- contact_test %>%
 #total balls in play for an attack angle) !!this one might need to account for great/poor players
 
 #creating the median probability of contact as the threshold for the moment 
-contact_threshold <- median(contact_test$contact_prob)
+contact_threshold <- median(contact_batter_all$contact_prob)
 
 #pred_contact determines if they made contact or not based off the threshold 
 #if it was less than median chance of contact than 0 for no contact, otherwise 1 for contact 
-contact_test <- contact_test %>%
+contact_batter_all <- contact_batter_all %>%
   mutate(pred_contact = case_when(contact_prob < contact_threshold ~ 0, 
                                   contact_prob >= contact_threshold ~ 1)) 
 
