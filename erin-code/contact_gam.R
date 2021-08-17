@@ -154,12 +154,12 @@ contact_py_test <- contact_dataset %>%
 write_rds(contact_gam, "private_data/contact_gam_model.rds")
 contact_gam <- read_rds("private_data/contact_gam_model.rds")
 
-# Test the model on the test dataset. I played around with the threshold to split at and found that 
-#0.48 seemed to maximize the overall accuracy of the model (0.80696). The average rate of contact 
-#is 0.765 in the contact_test dataset. 
+# Test the model on the test dataset. The average rate of contact is 0.773 in the contact_test dataset. 
+#I played around with the threshold and decided that 0.2 might well balance correctly predicting 
+#both contact and swings and misses. 
 contact_py_test$prob <- predict(contact_gam, type = "response", newdata = contact_py_test)
-contact_py_test$pred[contact_py_test$prob >= .28] = 1
-contact_py_test$pred[contact_py_test$prob < .28] = 0
+contact_py_test$pred[contact_py_test$prob >= .2] = 1
+contact_py_test$pred[contact_py_test$prob < .2] = 0
 contact_py_test$pred[is.na(contact_py_test$prob)] = 0
 
 # Compute the overall accuracy
@@ -167,11 +167,12 @@ mean(contact_py_test$pred == contact_py_test$contact)
 
 # Computationally less expensive way to break down model accuracy. Using the threshold from the log-model 
 #of 0.28, we get an accuracy of 85% for correctly predicting contact and 49.4% for correctly predicting 
-#swing and misses. If we use a threshold of 0.2, accuracy of predicting contact falls to 70.7% but we can 
-#predict 64.7% of swing and misses correctly. 
+#swing and misses. If we use a threshold of 0.2, accuracy of predicting contact falls to 69.3% but we can 
+#predict 64.7% of swing and misses correctly and 70.7% of contact correctly. 
 contact_py_test %>%
   group_by(contact) %>%
-  count(pred)
+  count(pred) %>%
+  mutate(freq = n/sum(n))
 
 # Create side by side boxplots for the predicted probability.
 contact_gam %>%
@@ -202,6 +203,17 @@ player_exp_swing_miss %>%
   geom_point(alpha = 0.7)+
   theme_minimal()+
   labs(x="attack angle", y="swing and miss percent", color = "")
+
+# Try to create a residual plot
+player_exp_swing_miss %>%
+  pivot_wider(id_cols = player_name:attack_angle, names_from = predicted, values_from = percent) %>%
+  mutate(resid = actual - expected) %>%
+  ggplot(aes(x=expected, y = resid)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(x="Predicted swing and miss percentage", y ="Residuals", title = "Residual Plot for Predicted Swing-Miss Test Data")+
+  theme_minimal()
+  
 
 # Plotting the gam...not super sure what the interaction plots are showing but 
 #the release speed plot is showing the estimated probability of swinging and missing 
