@@ -1,5 +1,5 @@
-####################################################################################################################################
-#This file intends to model strikeout probability based on different launch angles. 
+###################################################################################################################################
+#This file intends to model contact prob from different variables 
 #Brooke Coneeny, Sarah Sult, and Erin Franke 
 #CMSAcamp 2021
 ####################################################################################################################################
@@ -34,7 +34,7 @@ batter_all_2021 <- batter_all_2021 %>%
   mutate(year = "2021")
 
 batter_all <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
-                             batter_all_2019, batter_all_2020, batter_all_2021)
+                        batter_all_2019, batter_all_2020, batter_all_2021)
 
 
 #Creating a column which describes the result of the pitch 
@@ -49,7 +49,7 @@ batter_all <- batter_all %>%
   #Using Adam's recommended physics equations to calculate the approach angle of the pitch
   #Negative because of the direction of v and a vectors
   mutate(approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
-                              (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
+                                   (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
 
 #Finding each player's attack angle in each season
 attack_angles <- batter_all %>%
@@ -89,10 +89,15 @@ contact_batter_all <- hit_in_play %>%
 
 ####################################################################################################################################
 
-#Creating training and testing data sets for logistic model
+#Selecting only the variables we are interested in 
+contact_data <- contact_batter_all %>%
+  select("player_name", "year", "attack_angle", "plate_z", "launch_angle", "launch_speed") %>%
+  filter(!is.na(launch_angle), !is.na(launch_speed)) %>%
+  mutate(row_ID = row_number())
 
+#Creating training and testing data sets for contact model
 #Group by player and year so that all the pitches that a player swung at in a season are in either the test or train data set. 
-player_num_pitches <- contact_batter_all%>%
+player_num_pitches <- contact_data%>%
   group_by(player_name, year) %>%
   count()
 
@@ -104,55 +109,76 @@ set.seed(315)
 sample_rows <- sample(nrow(player_num_pitches), smp_size)
 
 player_year_train <- player_num_pitches[sample_rows,]
-player_year_test <- player_num_pitches[-sample_rows,]
+player_year_test <- player_year[-sample_rows,]
 
 contact_train <- contact_batter_all %>%
   right_join(player_year_train, by = c("player_name", "year")) 
 
-contact_test <- contact_batter_all %>%
-  right_join(player_year_test, by = c("player_name", "year")) 
+contact_test <- contact_dataset %>%
+  right_join(player_year_test, by = c("player_name", "year"))
 
-#Use training data to predict 
-init_logit <- glm(contact ~ attack_angle + plate_z + plate_x + release_speed,
-                  data = contact_train,
-                  family = "binomial")
+#Creating a GAM model which predicts probability of contact for any given hit given attack angle and pitch height
+#using only pitches they swung at 
+contact_model <- gam(contact ~ s(plate_z) + s(release_speed)
+                     + s(attack_angle) + s(approach_angle),
+                     data = contact_train, family = "binomial", method = "REML")
+
+#Testing accuracy of the model 
+contact_test$prob <- predict(contact_model, type = "response", newdata = contact_test)
+
+contact_threshold <- median(contact_test$prob)
+
+contact_test$pred[contact_test$prob >= contact_threshold] = 1
+contact_test$pred[contact_test$prob < contact_threshold] = 0
+contact_test$pred[is.na(contact_test$prob)] = 0
+
+#Compute the overall accuracy
+mean(contact_test$pred == contact_test$contact) 
+
+####################################################################################################################################
+
+#Finding predicted values, assigning an ID so we can add column to contact_data 
+contact_prob <- data.frame(predict(contact_model, contact_data, type = "response"))
+names(contact_prob)[1] <- "contact_prob"
+
+contact_prob <- contact_prob %>%
+  mutate(row_ID = row_number())
+
+contact_data <- contact_data %>% 
+  left_join(contact_prob, by = "row_ID") 
 
 ####################################################################################################################################
 
-#Finding predicted values from test data 
-hit_pred <- data.frame(predict(init_logit, contact_test, type = "response"))
+#create a GAM that predicts probability of foul or in play for any of the contact pitches above?
+#need to sample pitches that might be hit into play (likely using the batting average model to predict
+#total balls in play for an attack angle) !!this one might need to account for great/poor players
 
-#Find optimal cutoff probability to use to maximize accuracy 
-threshold <- median(contact_test$prob <- predict(init_logit, contact_test, type = "response"))
+#creating the median probability of contact as the threshold for the moment 
+contact_threshold <- median(contact_data$contact_prob)
 
-#Convert to 1s and 0s for predicted values 
-hit_pred$contact <- ifelse(hit_pred[1] >= threshold, 1, 0)
-hit_pred$contact <- ifelse(hit_pred[1] < threshold, 0, 1)
-hit_pred$contact <- as.factor(hit_pred$contact)
+#pred_contact determines if they made contact or not based off the threshold 
+#if it was less than median chance of contact than 0 for no contact, otherwise 1 for contact 
+contact_batter_all <- contact_batter_all %>%
+  mutate(pred_contact = case_when(contact_prob < contact_threshold ~ 0, 
+                                  contact_prob >= contact_threshold ~ 1)) 
 
-#Creating confusion matrix
-#Accuracy ~ 0.52
-contact_test$contact <- as.factor(contact_test$contact)
-cfm <- confusionMatrix(contact_test$contact, hit_pred$contact)
 
-#Calculate sensitivity ~ 0.641
-sensitivity(contact_test$contact, hit_pred$contact)
+########################################################################################################
 
-#Calculate specificity ~ 0.403
-specificity(contact_test$contact, hit_pred$contact)
+#once we FINALLY have a set of pitches that they hit over the season for that attack angle, we get 
+#the launch angles for these pitches and pass it all into the wOBA calculation to get the graph!
 
-#Calculate total misclassification rate ~ 0.478
-mis_class_rate <- mean(hit_pred$contact != contact_test$contact)
+########################################################################################################
 
-#Creating the class and score for ROC plot
-class <- init_logit$y
-score <- init_logit$fitted.values
 
-#Plotting ROC curve ~ this curve is not ideal, we want it to reach the top left corner but as as can see it 
-#is very close to the middle line
-ROCit_obj <- rocit(score = score,
-                   class = class)
-plot(ROCit_obj)
 
-####################################################################################################################################
+
+
+
+
+
+
+
+
+
 
