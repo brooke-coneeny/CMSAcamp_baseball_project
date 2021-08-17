@@ -95,7 +95,7 @@ contact_dataset <- batted_balls %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
          woba_value, description, description2, events, balls, strikes, plate_z, contact, plate_x, 
-         release_speed, pfx_z, stand) %>%
+         release_speed, pfx_z, stand, approach_angle) %>%
   filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
@@ -139,6 +139,7 @@ contact_gam <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10)
                    + s(attack_angle, approach_angle, k=28),
               data = contact_py_train, family = "binomial", method = "REML")
 summary(contact_gam)
+gam.check(contact_gam)
 
 write_rds(contact_gam, "private_data/contact_gam_model.rds")
 contact_gam <- read_rds("private_data/contact_gam_model.rds")
