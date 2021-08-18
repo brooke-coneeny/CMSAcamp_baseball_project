@@ -59,6 +59,7 @@ batter_all <- batter_all %>%
 
 
 #How does pitch type effect the proportion of pitches that are fair vs foul?
+#Result: different pitch types do not have a big effect on whether a pitch is hit fair or foul 
 pitch_type_effect <- batter_all %>%
   select("pitch_group", "contact") %>%
   group_by(pitch_group, contact) %>%
@@ -87,13 +88,81 @@ pitch_type_effect <- batter_all %>%
     y = "Percent Hit Fair"
   )
   
-  
-  
-  
-  
-  
-  
-  
+#How does a batters stance effect the amount of pitches hit fair vs foul?
+#Result: there is only a difference of 0.002 between different stances 
+stance_effect <- batter_all %>%
+  select("stand", "contact") %>%
+  group_by(stand, contact) %>%
+  summarize(num = n()) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = contact,
+    values_from = num
+  ) %>%
+  rename(
+    foul = 'FALSE',
+    fair = 'TRUE'
+  ) %>%
+  group_by(stand) %>%
+  mutate(percent_fair = 
+           fair / (foul + fair)) %>%
+  ggplot(aes(x = stand, y = percent_fair)) +
+  geom_col() + 
+  theme_bw() + 
+  labs(
+    title = "Does a batters stance change amount of pitches hit fair?",
+    subtitle = "Looking at made-contact pitches only",
+    x = "Stance",
+    y = "Percent Hit Fair"
+  )
+
+#Looking at the most common release spin rates 
+#Result: LARGE majority between 1500-3000
+spin <- batter_all %>%
+  ggplot(aes(x = release_spin_rate)) +
+  geom_density()
+
+#How does release spin rate effect the amount of pitches hit fair vs foul? 
+#Result: does not look like there is much of a difference between spin rate and fair percentage 
+spin_effect <- batter_all %>%
+  select("release_spin_rate", "contact") %>%
+  filter(!is.na(release_spin_rate)) %>%
+  #filter(release_spin_rate >= 1500 & release_spin_rate <= 3000) %>%
+  mutate(spin_group = case_when(
+    release_spin_rate < 1500 ~ "0-1500",
+    release_spin_rate >= 1500 & release_spin_rate < 1800 ~ "1500-1800",
+    release_spin_rate >= 1800 & release_spin_rate < 2100 ~ "1800-2100",
+    release_spin_rate >= 2100 & release_spin_rate < 2400 ~ "2100-2400",
+    release_spin_rate >= 2400 & release_spin_rate < 2700 ~ "2400-2700",
+    release_spin_rate >= 2700 & release_spin_rate < 3000 ~ "2700-3000",
+    release_spin_rate >= 3000 ~ "3000-max"
+  )) %>%
+  group_by(spin_group, contact) %>%
+  summarize(num = n()) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = contact,
+    values_from = num
+  ) %>%
+  rename(
+    foul = 'FALSE',
+    fair = 'TRUE'
+  ) %>%
+  group_by(spin_group) %>%
+  mutate(percent_fair = 
+           fair / (foul + fair)) %>%
+  ggplot(aes(x = spin_group, y = percent_fair)) +
+  geom_col() + 
+  theme_bw() + 
+  labs(
+    title = "Does release spin rate change amount of pitches hit fair?",
+    subtitle = "Looking at made-contact pitches only",
+    x = "Release Spin Rate",
+    y = "Percent Hit Fair"
+  )
+
+
+
   
   
   
