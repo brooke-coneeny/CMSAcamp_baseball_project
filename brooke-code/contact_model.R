@@ -123,6 +123,9 @@ contact_model <- gam(contact ~ s(plate_z) + s(release_speed)
                      + s(attack_angle) + s(approach_angle),
                      data = contact_train, family = "binomial", method = "REML")
 
+write_rds(contact_model, "private_data/contact_model.rds")
+contact_model <- read_rds("private_data/contact_gam_model.rds")
+
 #Testing accuracy of the model 
 contact_test$prob <- predict(contact_model, type = "response", newdata = contact_test)
 
@@ -171,7 +174,21 @@ contact_batter_all <- contact_batter_all %>%
 ########################################################################################################
 
 
+Notes: 
+  
+- making a gam with these types of variables 
+  - pitch type
+  - release speed
+  - zone
+  - stand
+  - release spin rate
 
+- only use pitches that we thought were contact, then determine fair vs foul, run through original process 
+- will take different attack angles, find out if they made contact and if fair or foul
+- then from there find LA and woba 
+
+- for EDA try and break up continuous variables into different segments 
+  
 
 
 
