@@ -24,7 +24,14 @@ batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
 # First, denote whether a pitch was swung at, create a variable called swung_at that denotes 
 #with a 1 if the pitch was swung at and a 0 if the pitch was not swung at. 
-swing_prob_data <- batter_all_2019 %>%
+batter_all_2019_lefty<- batter_all_2019 %>%
+  filter(stand == "L") %>%
+  mutate(plate_x = -1*plate_x)
+batter_all_2019_rest <- batter_all_2019 %>%
+  filter(stand != "L")
+batter_all_2019_reflect <- bind_rows(batter_all_2019_lefty, batter_all_2019_rest)
+
+swing_prob_data <- batter_all_2019_reflect %>%
   mutate(swung_at = case_when(description %in% c("ball", "blocked_ball", "called_strike", "hit_by_pitch") ~ 0, 
                               description %in% c("foul", "foul_tip", "hit_into_play", "swinging_strike", "swinging_strike_blocked") ~ 1, 
                               TRUE ~ 2), 
@@ -39,10 +46,9 @@ swing_prob_data <- batter_all_2019 %>%
   filter(swung_at %in% c(0, 1)) %>%
   select(swung_at, pitch_type, in_horizontal_zone, everything())
 
-# Visualization that selects 2000 pitches and creates a scatterplot of zone coordinates showing what 
+# Visualization that selects 2500 pitches and creates a scatterplot of zone coordinates showing what 
 #was swung at and what was taken
-swing_prob_data %>%
-  head(2000)%>%
+sample_n(swing_prob_data, 2500) %>%
   ggplot(aes(x=plate_x, y=plate_z, color=swung_at)) +
   geom_point(alpha=0.7)+
   geom_vline(xintercept = 11/12, linetype = "dashed")+
@@ -50,18 +56,54 @@ swing_prob_data %>%
   theme_minimal()+
   scale_color_manual(values = c("firebrick", "cadetblue3"))+
   labs(x="Horizontal pitch location (ft)", y="Pitch height (ft)", 
-       title = "MLB Hitter Pitch Selection: <strong><span style='color:firebrick'>Takes</span></strong></b> versus <strong><span style='color:cadetblue3'>swings</span></strong></b>")+
+       title = "MLB Hitter Pitch Selection: <strong><span style='color:firebrick'>Takes</span></strong></b> versus <strong><span style='color:cadetblue3'>swings</span></strong></b>", 
+       subtitle = "With positive numbers representing outside pitches and negative representing inside pitches")+
   theme(plot.title.position = "plot",
         plot.title = element_markdown(size = 10), 
         axis.title = element_markdown(size=9),
+        plot.subtitle = element_markdown(size=8),
         legend.position = "none")
 
-#For pitches swung at outside of the horizontal strike zone (still working on this one)
-swing_prob_data %>%
-  filter(!is.na(pitch_type)) %>%
-  ggplot(aes(x=in_horizontal_zone, fill=pitch_type))+
-  geom_bar(position = "fill")+
-  facet_wrap(~swung_at)+
-  theme_minimal()
+#For pitches swung at outside of the horizontal strike zone what are more often swung at? 
+fastballs <- swing_prob_data %>%
+  filter(pitch_type == "Fastball") %>%
+  group_by(in_horizontal_zone, swung_at) %>%
+  count() %>%
+  ungroup() %>%
+  group_by(in_horizontal_zone) %>%
+  mutate(freq = n / sum(n), 
+         pitch_type = "Fastball")
+
+offspeeds <- swing_prob_data %>%
+  filter(pitch_type == "Offspeed") %>%
+  group_by(in_horizontal_zone, swung_at) %>%
+  count() %>%
+  ungroup() %>%
+  group_by(in_horizontal_zone) %>%
+  mutate(freq = n / sum(n), 
+         pitch_type = "Offspeed")
+
+breakings <- swing_prob_data %>%
+  filter(pitch_type == "Breaking") %>%
+  group_by(in_horizontal_zone, swung_at) %>%
+  count() %>%
+  ungroup() %>%
+  group_by(in_horizontal_zone) %>%
+  mutate(freq = n / sum(n), 
+         pitch_type = "Breaking")
+
+pitch_selection <- bind_rows(fastballs, offspeeds, breakings)
+pitch_selection %>%
+  filter(in_horizontal_zone == 0) %>%
+  ggplot(aes(x=pitch_type, y=freq, fill=swung_at))+
+  geom_col(position = "fill")+
+  theme_minimal()+
+  labs(x = "", y="",
+       title = "Offspeed pitches outside the horizontal strike zone are more often <strong><span style='color:cadetblue3'>swung at</span></strong></b> than fastballs and breaking balls")+
+  scale_y_discrete(expand = c(0,0))+
+  scale_fill_manual(values = c("firebrick", "cadetblue3"))+
+  theme(plot.title = element_markdown(size=8), 
+        legend.position = "none")
+
 
   
