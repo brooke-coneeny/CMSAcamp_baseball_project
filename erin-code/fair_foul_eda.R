@@ -20,6 +20,23 @@ batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
 
+batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
+                             batter_all_2019, batter_all_2020, batter_all_2021)
+batter_all_1621 <- batter_all_1621 %>%
+  mutate(description2 = case_when(description %in% c("ball", "blocked_ball", "intent_ball") ~ "ball", 
+                                  description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
+                                                     "missed_bunt", "pitchout") ~ "other", 
+                                  description %in% c("foul") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked", "foul_tip") ~ "swinging_strike",
+                                  TRUE ~ description), 
+         #Using Adam's recommended physics equations to calculate the approach angle of the pitch
+         #Negative because of the direction of v and a vectors
+         approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
+                                   (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
+
+batted_balls <- read_rds("public_data/batted_balls.rds")
+strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
+attack_angles <- read_rds("public_data/attack_angles_1621.rds")
 ####################################################################################################################################
 #EDA TO EXPLORE WHAT CORRELATES WITH FAIR/FOUL (foul tips not included)
 
@@ -113,6 +130,105 @@ batter_all_1621 %>%
         axis.text = element_text(family = "mono", face = "bold", size=9), 
         axis.title = element_text(family = "mono", face = "bold", size=7))
 ####################################################################################################################################
+# FAIR or FOUL GAM
+fair_foul_batted_balls <- batter_all_1621 %>%
+  filter(description %in% c("hit_into_play", "foul")) %>%
+  mutate(fair_ball = case_when(description2 == "hit_into_play" ~ 1, 
+                               description2 == "foul" ~0))
+
+# Create the fair/foul dataset. This takes all pitches that were either hit foul or fair, and assigns it the player's attack 
+#angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
+#balls in a given season. Filter for pitches with a height less than or equal to 5 ft and greater than -2.5 feet 
+#(I assume this just means they bounce far in front of the plate). Also break the pitch type down into broader categories. 
+fair_foul_dataset <- batted_balls %>%
+  filter(balls_in_play >= 50) %>%
+  left_join(fair_foul_batted_balls, by=c("year", "player_name")) %>%
+  left_join(attack_angles, by = c("year", "player_name")) %>%
+  select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
+         woba_value, description, description2, events, balls, strikes, plate_z, fair_ball, plate_x, 
+         release_speed, release_spin_rate, stand, approach_angle) %>%
+  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+  mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type)) %>%
+  filter(plate_z <=5 & plate_z >= -2.5)
+
+#Reflect the lefties plate x values to match the rightys.  
+fair_foul_dataset_lefty <- fair_foul_dataset %>%
+  filter(stand == "L") %>%
+  mutate(plate_x = -1*plate_x)
+fair_foul_dataset_rest <- fair_foul_dataset %>%
+  filter(stand != "L")
+fair_foul_dataset <- bind_rows(fair_foul_dataset_rest, fair_foul_dataset_lefty)
+
+# Create training and test dataset from the contact_dataset. Group by player 
+#and year so that all the pitches that a player swung at in a season are in either 
+#the test or train dataset. 
+player_year_ff <- fair_foul_dataset %>%
+  group_by(player_name, year) %>%
+  count()
+
+set.seed(216)
+
+nrow(player_year)*0.75
+sample_rows3 <- sample(nrow(player_year), 1972)
+
+player_year_train_ff <- player_year_ff[sample_rows3,]
+player_year_test_ff <- player_year_ff[-sample_rows3,]
+
+ff_py_train <- fair_foul_dataset %>%
+  right_join(player_year_train_ff, by = c("player_name", "year"))
+ff_py_test <- fair_foul_dataset %>%
+  right_join(player_year_test_ff, by = c("player_name", "year"))
+
+# Create the GAM. Predict whether contact will be made given a player's attack angle and 
+#the height of the pitch. 
+
+fair_foul_gam <- gam(fair_ball ~ s(plate_x, plate_z, k=20) + s(release_speed, release_spin_rate, k=20) 
+                   + s(attack_angle, approach_angle, k=20), 
+                   data = ff_py_train, family = "binomial", method = "REML")
+summary(fair_foul_gam)
+
+write_rds(fair_foul_gam, "private_data/fair_foul_gam_model.rds")
+
+fair_foul_gam <- read_rds("private_data/fair_foul_gam_model.rds")
+
+# Test the model on the test dataset. First, find the average rate of fair balls in the test dataset. 
+#It is  0.499. 
+ff_py_test %>%
+  group_by(fair_ball) %>%
+  count()
+
+# Determine an optimal threshold at which to predict a fair ball. If the probability of a fair ball is above this threshold, 
+#predict the batter will hit it fair(1). If not, predict they will foul off the pitch (0).  
+#It seems like a good threshold that might balance the accuracy of both categories is 0.5, which makes sense because the 
+#dataset is almost perfectly evenly divided between fair and foul balls. 
+ff_py_test$prob <- predict(fair_foul_gam, type = "response", newdata = ff_py_test)
+ff_py_test$pred[ff_py_test$prob >= .5] = 1
+ff_py_test$pred[ff_py_test$prob < .5] = 0
+ff_py_test$pred[is.na(ff_py_test$prob)] = 0
+
+# Compute the overall accuracy, break down the accuracy into categories for correctly predicting 
+#foul and fair balls. 
+#Overall model accuracy on the test dataset is 58.2%. 63.7% of fair balls are predicted correctly 
+#and 52.7% of foul balls are predicted correctly at the threshold of 05.
+mean(ff_py_test$pred == ff_py_test$fair_ball) 
+ff_py_test %>%
+  group_by(fair_ball) %>%
+  count(pred) %>%
+  mutate(freq = n/sum(n))
+
+# Create side by side boxplots for the predicted probability.
+fair_foul_gam %>%
+  augment(type.predict = "response") %>%
+  ggplot(aes(y = .fitted, x = fair_ball, group = fair_ball)) + 
+  geom_boxplot() + 
+  ylab("Predicted probability of a fair ball") + 
+  xlab("Acutal fair/foul (1 = fair, 0 = foul") + 
+  theme_classic()
+
+####################################################################################################################################
 # EDA TO EXPLORE WHAT PITCHES ARE SWUNG AT 
 
 # First, denote whether a pitch was swung at, create a variable called swung_at that denotes 
@@ -130,9 +246,9 @@ swing_prob_data <- batter_all_2019_reflect %>%
                               TRUE ~ 2), 
          swung_at = as.factor(swung_at), 
          pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
-                                       pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
-                                       pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
-                                       TRUE ~ pitch_type), 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type), 
          in_horizontal_zone = case_when(abs(plate_x) > 11/12 ~ 0, 
                                         TRUE ~ 1), 
          in_horizontal_zone = as.factor(in_horizontal_zone)) %>%
@@ -197,7 +313,3 @@ pitch_selection %>%
   scale_fill_manual(values = c("firebrick", "cadetblue3"))+
   theme(plot.title = element_markdown(size=8), 
         legend.position = "none")
-
-
-          
-  

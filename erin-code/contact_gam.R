@@ -41,8 +41,8 @@ batter_all_1621 <- batter_all_1621 %>%
   mutate(description2 = case_when(description %in% c("ball", "blocked_ball", "intent_ball") ~ "ball", 
                                   description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
                                                      "missed_bunt", "pitchout") ~ "other", 
-                                  description %in% c("foul", "foul_tip") ~ "foul", 
-                                  description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
+                                  description %in% c("foul") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked", "foul_tip") ~ "swinging_strike",
                                   TRUE ~ description), 
          #Using Adam's recommended physics equations to calculate the approach angle of the pitch
          #Negative because of the direction of v and a vectors
@@ -80,8 +80,7 @@ contact_dataset <- batted_balls %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
                                 pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
-                                TRUE ~ pitch_type), 
-         plate_x = abs(plate_x)) %>%
+                                TRUE ~ pitch_type)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 # Create density plot showing the distribution of vertical pitch movement (ft) for all pitches 
@@ -141,10 +140,10 @@ player_year <- contact_dataset %>%
   group_by(player_name, year) %>%
   count()
 
-set.seed(213)
+set.seed(214)
 
 nrow(player_year)*0.75
-sample_rows2 <- sample_rows <- sample(nrow(player_year), 1972)
+sample_rows2 <- sample(nrow(player_year), 1972)
 
 player_year_train <- player_year[sample_rows2,]
 player_year_test <- player_year[-sample_rows2,]
@@ -157,16 +156,16 @@ contact_py_test <- contact_dataset %>%
 # Create the GAM. Predict whether contact will be made given a player's attack angle and 
 #the height of the pitch. 
 
-# contact_gam <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10) 
-#                    + s(attack_angle, pfx_z, k=28), 
-#               data = contact_py_train, family = "binomial", method = "REML")
-# summary(contact_gam)
-#write_rds(contact_gam, "private_data/contact_gam_model.rds")
+#contact_gam <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10) 
+#                   + s(attack_angle, pfx_z, k=28), 
+#                   data = contact_py_train, family = "binomial", method = "REML")
+summary(contact_gam)
+write_rds(contact_gam, "private_data/contact_gam_model.rds")
 
 contact_gam <- read_rds("private_data/contact_gam_model.rds")
 
 # Test the model on the test dataset. First, find the average rate of contact in the test dataset. 
-#It is  0.7693753. 
+#It is  0.7545902. 
 contact_py_test %>%
   group_by(contact) %>%
   count()
@@ -175,16 +174,16 @@ contact_py_test %>%
 #predict the batter will make contact (0). If not, predict they will swing and miss (1). Because contact is so common at 
 #over 3/4 of the time, it will be harder to predict accurately swings and misses than it will to predict contact. 
 #It seems like a good threshold that might balance the accuracy of both categories (even if it sacrifices the overall 
-#accuracy a bit) is 0.21. 
+#accuracy a bit) is 0.22. 
 contact_py_test$prob <- predict(contact_gam, type = "response", newdata = contact_py_test)
-contact_py_test$pred[contact_py_test$prob >= .2] = 1
-contact_py_test$pred[contact_py_test$prob < .2] = 0
+contact_py_test$pred[contact_py_test$prob >= .22] = 1
+contact_py_test$pred[contact_py_test$prob < .22] = 0
 contact_py_test$pred[is.na(contact_py_test$prob)] = 0
 
-# Compute the overall accuracy, break down the accuracy into catogories for correctly predicting swing and misses as well 
-#as contact. 
-#It seems like a threshold of 0.2 might balance accuracy pretty well between the cateogories. Overall model accuracy on the test 
-#dataset is 69.1%. 70.3% of contact is predicted correctly and 65.2% of swing and misses are predicted correctly. 
+# Compute the overall accuracy, break down the accuracy into categories for correctly predicting 
+#swing and misses as well as contact. 
+#Overall model accuracy on the test dataset is 67.7%. 68.3% of contact is predicted correctly 
+#and 65.9% of swing and misses are predicted correctly. 
 mean(contact_py_test$pred == contact_py_test$contact) 
 contact_py_test %>%
   group_by(contact) %>%
@@ -220,9 +219,9 @@ player_exp_swing_miss %>%
   theme_minimal()+
   labs(x="attack angle", y="swing and miss percent", color = "")
 
-# Create a residual plot for the model using the test data. This looks pretty good, 
-#expect it tends to overestimate the swing and miss percentage when it predicts swing and miss percentages 
-#above 28%. 
+# Create a residual plot for the model using the test data. This looks okay - it tends to overestimate the 
+#swing and miss percentage when it predicts swing and miss percentage in general and especially at high predicted
+#swing and miss percentages. 
 player_exp_swing_miss %>%
   pivot_wider(id_cols = player_name:attack_angle, names_from = predicted, values_from = percent) %>%
   mutate(resid = actual - expected) %>%
@@ -231,33 +230,28 @@ player_exp_swing_miss %>%
   geom_smooth(se = FALSE) +
   labs(x="Predicted swing and miss percentage", y ="Residuals", title = "Residual Plot for Predicted Swing-Miss Test Data")+
   theme_minimal()
-  
-
-# A little bit of messing around with plotting the GAM. 
-plot(contact_gam, pages = 1, trans = plogis, 
-     shift = coef(contact_gam)[1])
 
 ####################################################################################################################################
 # GAM 2: Exact same as contact gam 1, except this one includes pitch approach angle instead of vertical break. 
 
-# contact_gam2 <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10) 
-#                     + s(attack_angle, approach_angle, k=28), 
-#                data = contact_py_train, family = "binomial", method = "REML")
-# summary(contact_gam2)
+#contact_gam2 <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10) 
+#                    + s(attack_angle, approach_angle, k=28), 
+#                    data = contact_py_train, family = "binomial", method = "REML")
+#summary(contact_gam2)
 
 #write_rds(contact_gam2, "private_data/contact_gam2.rds")
 contact_gam2 <- read_rds("private_data/contact_gam2.rds")
 
 #Using the same dataset as GAM 1, test the new model. 
 contact_py_test$prob2 <- predict(contact_gam2, type = "response", newdata = contact_py_test)
-contact_py_test$pred2[contact_py_test$prob2 >= .2] = 1
-contact_py_test$pred2[contact_py_test$prob2 < .2] = 0
+contact_py_test$pred2[contact_py_test$prob2 >= .22] = 1
+contact_py_test$pred2[contact_py_test$prob2 < .22] = 0
 contact_py_test$pred2[is.na(contact_py_test$prob2)] = 0
 
 # Compute the overall accuracy, break down the accuracy into catogories for correctly predicting swing and misses as well 
 #as contact. 
-#At the same threshold as before, the model overall accuracy is slightly higher at 69.35%.  
-#70.4% of contact is predicted correctly and 65.9% of swing and misses are predicted correctly. 
+#At the same threshold as before, the model overall accuracy is slightly higher at 68.1017%.  
+#68.7% of contact is predicted correctly and 66.4% of swing and misses are predicted correctly. 
 mean(contact_py_test$pred2 == contact_py_test$contact) 
 contact_py_test %>%
   group_by(contact) %>%
@@ -293,9 +287,8 @@ player_exp_swing_miss %>%
   theme_minimal()+
   labs(x="attack angle", y="swing and miss percent", color = "")
 
-# Create a residual plot for the model using the test data. This looks pretty good, 
-#expect it tends to overestimate the swing and miss percentage when it predicts swing and miss percentages 
-#above 28%. Very similar to GAM 1. 
+# Create a residual plot for the model using the test data. This again looks okay, 
+#but it tends to overestimate the swing and miss percentage especially at values over 28%.  
 player_exp_swing_miss %>%
   pivot_wider(id_cols = player_name:attack_angle, names_from = predicted, values_from = percent) %>%
   mutate(resid = actual - expected) %>%
