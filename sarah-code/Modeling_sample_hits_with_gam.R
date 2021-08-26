@@ -52,16 +52,17 @@ batter_all_1621 <- batter_all_1621 %>%
   mutate(description2 = case_when(description %in% c("ball", "blocked_ball", "intent_ball") ~ "ball", 
                                   description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
                                                      "missed_bunt", "pitchout") ~ "other", 
-                                  description %in% c("foul", "foul_tip") ~ "foul", 
-                                  description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
-                                  TRUE ~ description),
+                                  description %in% c("foul") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked", "foul_tip") ~ "swinging_strike",
+                                  TRUE ~ description), 
          #Using Adam's recommended physics equations to calculate the approach angle of the pitch
          #Negative because of the direction of v and a vectors
          approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
-                                 (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
+                                   (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
 
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
+attack_angles <- read_rds("public_data/attack_angles_1621.rds")
 
 ####################################################################################################################################
 #This GAM intends to model swing and miss probability based on different launch angles (in other words, predicting
@@ -76,14 +77,6 @@ contact_batted_balls <- batter_all_1621 %>%
   filter(description2 %in% c("swinging_strike", "foul", "hit_into_play")) %>%
   mutate(contact = case_when(description2 == "swinging_strike" ~ 1, 
                              description2 %in% c("foul", "hit_into_play") ~ 0))
-
-#find each player's attack angle in each season
-attack_angles <- batter_all_1621 %>%
-  filter(description == "hit_into_play") %>%
-  group_by(player_name, year) %>% 
-  filter(launch_speed <= 120 -.02 * abs(launch_angle - 12)^1.7) %>%
-  filter(launch_speed >= quantile(launch_speed, .9, na.rm = TRUE)) %>%
-  summarize(attack_angle = median(launch_angle))
 
 # Create the contact dataset. This takes all pitches that were swung at from above, and assigns it the player's attack 
 #angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
@@ -100,8 +93,7 @@ contact_dataset <- batted_balls %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
                                 pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
-                                TRUE ~ pitch_type), 
-         plate_x = abs(plate_x)) %>%
+                                TRUE ~ pitch_type)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 #Reflect the lefties plate x values to match the righty. 
@@ -119,10 +111,10 @@ player_year <- contact_dataset %>%
   group_by(player_name, year) %>%
   count()
 
-set.seed(211)
+set.seed(214)
 
 nrow(player_year)*0.75
-sample_rows2 <- sample_rows <- sample(nrow(player_year), 1972)
+sample_rows2 <- sample(nrow(player_year), 1972)
 
 player_year_train <- player_year[sample_rows2,]
 player_year_test <- player_year[-sample_rows2,]
@@ -135,56 +127,106 @@ contact_py_test <- contact_dataset %>%
 # Create the logistic model. Predict whether contact will be made given a player's attack angle and 
 #the height of the pitch. 
 
-contact_gam <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10)
-                   + s(attack_angle, approach_angle, k=28),
-              data = contact_py_train, family = "binomial", method = "REML")
+contact_gam <- gam(contact ~ s(plate_x, plate_z, k=28) + s(release_speed, k=10) 
+                   + s(attack_angle, approach_angle, k=28), 
+                   data = contact_py_train, family = "binomial", method = "REML")
 summary(contact_gam)
 gam.check(contact_gam)
+#.22 is the threshold that maximized accuracy
 
 write_rds(contact_gam, "private_data/contact_gam_model.rds")
 contact_gam <- read_rds("private_data/contact_gam_model.rds")
 
 ########################################################################################################
-#EDA for model to predict fair/foul
-
+# FAIR or FOUL GAM
 fair_foul_batted_balls <- batter_all_1621 %>%
-  filter(description2 %in% c("foul", "hit_into_play")) %>%
-  mutate(fair = case_when(description2 == "hit_into_play" ~ 1, 
-                             description2 == "foul" ~ 0))
+  filter(description %in% c("hit_into_play", "foul")) %>%
+  mutate(fair_ball = case_when(description2 == "hit_into_play" ~ 1, 
+                               description2 == "foul" ~0))
 
+# Create the fair/foul dataset. This takes all pitches that were either hit foul or fair, and assigns it the player's attack 
+#angle in that appropriate season. By joining with batted_balls, we filter for players that had at least 50 batted 
+#balls in a given season. Filter for pitches with a height less than or equal to 5 ft and greater than -2.5 feet 
+#(I assume this just means they bounce far in front of the plate). Also break the pitch type down into broader categories. 
 fair_foul_dataset <- batted_balls %>%
   filter(balls_in_play >= 50) %>%
   left_join(fair_foul_batted_balls, by=c("year", "player_name")) %>%
   left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
-         woba_value, description, description2, events, balls, strikes, plate_z, fair, plate_x, 
-         release_speed, pfx_z, stand, approach_angle) %>%
+         woba_value, description, description2, events, balls, strikes, plate_z, fair_ball, plate_x, 
+         release_speed, release_spin_rate, stand, approach_angle) %>%
   filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
                                 pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
-                                TRUE ~ pitch_type), 
-         fair = as.factor(fair))%>%
-         #plate_x = abs(plate_x)) %>%
+                                TRUE ~ pitch_type)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
-#On the fringes is more fouls (makes sense), fastballs seem to have more fouls up top, breaking seem to 
-#have more fouls on the botton, and offspeed seem to have more fairs overall
-fair_foul_dataset %>% filter(year==2019) %>%
-  ggplot(aes(x=plate_x, y=plate_z, color = fair)) +
-  geom_point(alpha = .2) + theme_bw() + ggthemes::scale_color_colorblind() +
-  facet_wrap(~pitch_type)
+#Reflect the lefties plate x values to match the rightys.  
+fair_foul_dataset_lefty <- fair_foul_dataset %>%
+  filter(stand == "L") %>%
+  mutate(plate_x = -1*plate_x)
+fair_foul_dataset_rest <- fair_foul_dataset %>%
+  filter(stand != "L")
+fair_foul_dataset <- bind_rows(fair_foul_dataset_rest, fair_foul_dataset_lefty)
 
-#All seem very similar. Counts where the batter is behind seem to have more fouls relative to fairs
-fair_foul_dataset %>% filter(year == 2019, balls != 4) %>%
-  ggplot(aes(x=fair))+
-  geom_bar()+theme_bw()+facet_wrap(~balls + strikes)
+# Create training and test dataset from the contact_dataset. Group by player 
+#and year so that all the pitches that a player swung at in a season are in either 
+#the test or train dataset. 
+player_year_ff <- fair_foul_dataset %>%
+  group_by(player_name, year) %>%
+  count()
 
-#Flat pitches seem to get more fouls (across all attack angles when you condition on contact)
-#Flat fastballs have the most distinct chunk of fouls (especially for loftier swings), flat swings on 
-#offspeeds seem to do well
-fair_foul_dataset %>% filter(year==2019) %>%
-  ggplot(aes(x=attack_angle, y=approach_angle, color = fair)) +
-  geom_point(alpha=.2) + theme_bw() + ggthemes::scale_color_colorblind() +
-  facet_wrap(~pitch_type)
+set.seed(216)
+
+nrow(player_year_ff)*0.75
+sample_rows3 <- sample(nrow(player_year_ff), 1972)
+
+player_year_train_ff <- player_year_ff[sample_rows3,]
+player_year_test_ff <- player_year_ff[-sample_rows3,]
+
+ff_py_train <- fair_foul_dataset %>%
+  right_join(player_year_train_ff, by = c("player_name", "year"))
+ff_py_test <- fair_foul_dataset %>%
+  right_join(player_year_test_ff, by = c("player_name", "year"))
+
+# Create the GAM. Predict whether contact will be made given a player's attack angle and 
+#the height of the pitch. 
+
+fair_foul_gam <- gam(fair_ball ~ s(plate_x, plate_z, k=20) + s(release_speed, release_spin_rate, k=20) 
+                     + s(attack_angle, approach_angle, k=20), 
+                     data = ff_py_train, family = "binomial", method = "REML")
+summary(fair_foul_gam)
+gam.check(fair_foul_gam)
+#.5 is the threshold that maximized accuracy
+
+write_rds(fair_foul_gam, "private_data/fair_foul_gam_model.rds")
+
+fair_foul_gam <- read_rds("private_data/fair_foul_gam_model.rds")
+
+########################################################################################################
+#Creating function so we can go from their full season pitches to a 
+#subset that they might have hit at a different attack angle
+
+clean_edges <- function (data){
+  for(i in 1:length(data$launch_angle)){
+    if(!is.na(data$launch_angle[i])){
+      if(data$launch_angle[i] < (mean(data$launch_angle, na.rm = TRUE)-2*sd(data$launch_angle, na.rm = TRUE))){
+        data$cleaned_launch_angle[i] <- (mean(data$launch_angle, na.rm = TRUE)-2*sd(data$launch_angle, na.rm = TRUE))
+      }
+      else if(data$launch_angle[i] > (mean(data$launch_angle, na.rm = TRUE)+2*sd(data$launch_angle, na.rm = TRUE))){
+        data$cleaned_launch_angle[i] <- (mean(data$launch_angle, na.rm = TRUE)+2*sd(data$launch_angle, na.rm = TRUE))
+      }
+      else{
+        data$cleaned_launch_angle[i]<-data$launch_angle[i]
+      }
+    }
+    else{
+      data$cleaned_launch_angle[i]<-data$launch_angle[i]
+    }
+  }
+  return (data)
+}
+
+
 
