@@ -251,7 +251,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
 
       for(i in 1:length(pred_angles$launch_angle)){
         # Sample a launch speed around their actual attack angle
-        hits_at_angle <- mtrout %>%     #we want to sample exit velocities from his actual data
+        hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
                                   #not just the ones we sampled as potential hit into play
           filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
                    orig_attack-3 & !is.na(launch_speed))

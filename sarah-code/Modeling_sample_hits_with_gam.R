@@ -205,7 +205,7 @@ write_rds(fair_foul_gam, "private_data/fair_foul_gam_model.rds")
 fair_foul_gam <- read_rds("private_data/fair_foul_gam_model.rds")
 
 ########################################################################################################
-#Creating function so we can go from their full season pitches to a 
+#Creating functions so we can go from their full season pitches to a 
 #subset that they might have hit at a different attack angle
 
 clean_edges <- function (data){
@@ -227,6 +227,100 @@ clean_edges <- function (data){
   }
   return (data)
 }
+
+
+#Function that will get the sample of balls they could have hit into play for each attack angle
+get_sample_hits <- function(contact_model, fair_foul_model, player_data){
+  #Repeat this process for all 31 attack angles we are looking at
+  for(possible_attack in 0:30){
+    player_data$attack_angle <- possible_attack
+    #Get the whether there is contact using threshold of .22
+    prob_contact <- predict(contact_model, newdata = player_data, type = "response")
+    player_data <- player_data %>% mutate(pitch_prob_contact = prob_contact, 
+                                          pred_contact = ifelse(pitch_prob_contact >= .22, 1, 0))
+
+    #Get the subset of player_data that predicted contact
+    player_contact <- player_data %>% filter(pred_contact == 1)
+    
+    #Get whether it is fair using threshold of .5
+    prob_fair <- predict(fair_foul_model, newdata = player_contact, type = "response")
+    player_contact <- player_contact %>% mutate(prob_fair = prob_fair,
+                              pred_fair = ifelse(prob_fair >= .5, 1, 0))
+    
+    #Get the subset of player_contact that predicted fair
+    player_fair <- player_contact %>% filter(pred_fair == 1)
+    print(nrow(player_fair))
+  }
+  return (player_fair)
+}
+
+########################################################################################################
+
+#Modified function from previous presentation to get predicted wobas for each attack angle
+test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
+  
+  # Initialize vectors for results
+  original_attack <- c(rep(orig_attack, times=31))
+  original_woba <- c(rep(orig_woba, times = 31))
+  possible_attack_vec <- c(0:30)
+  predicted_woba <- c()
+  avg_predicted_woba <- c()
+  
+  for(possible_attack in 0:30){
+    current_attack <- player_data %>% filter(attack_angle == possible_attack)
+    # Repeat 10 times
+    for(n in 1:10){
+      EV_vector4 <- vector()    # To hold launch speeds for this function
+      
+      # Find the possible launch angle for this attack angle
+      #current_attack$attack_angle <- possible_attack
+      pred_angles <- tibble(lm.preds = predict(LA_model, newdata = current_attack))
+      pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                          sd = sigma(LA_model)), 
+                                            launch_angle = lm.preds + noise)
+      
+      for(i in 1:length(pred_angles$launch_angle)){
+        # Sample a launch speed around their actual attack angle
+        hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
+          #not just the ones we sampled as potential hit into play
+          filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                   orig_attack-3 & !is.na(launch_speed))
+        # Randomly sample 1 exit velocity form similar hits
+        EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+        pred_EV <- hits_at_angle[EV_sample_index,] 
+        # Add that launch speed to vector as the predicted launch speed 
+        EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+      }
+      
+      # Create modeled data for this attack angle
+      modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+      preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+      xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+      
+      predicted_woba <- c(predicted_woba, xwOBA)
+    }
+    avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+  }
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
+}
+
+########################################################################################################
+#Load in the models from the first section of the research
+woba_model<- read_rds("public_data/woba_model.rds")
+predicted_LA <- read_rds("private_data/LA_model.rds")
+
+
+#Test for Trout
+mtrout <- batter_all_1621 %>%
+  filter(year == 2019, player_name == "Trout, Mike") %>% clean_edges()
+
+mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
+
+mtrout_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, mtrout) 
+mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
+                                             mtrout$attack_angle[1], mtrout_woba)
 
 
 
