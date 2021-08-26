@@ -231,6 +231,9 @@ clean_edges <- function (data){
 
 #Function that will get the sample of balls they could have hit into play for each attack angle
 get_sample_hits <- function(contact_model, fair_foul_model, player_data){
+  #Create an empty starting tibble
+  sample_hits <- player_data
+  sample_hits <- sample_hits[0,]
   #Repeat this process for all 31 attack angles we are looking at
   for(possible_attack in 0:30){
     player_data$attack_angle <- possible_attack
@@ -249,9 +252,9 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
     
     #Get the subset of player_contact that predicted fair
     player_fair <- player_contact %>% filter(pred_fair == 1)
-    print(nrow(player_fair))
+    sample_hits <- rbind(sample_hits, player_fair)
   }
-  return (player_fair)
+  return (sample_hits)
 }
 
 ########################################################################################################
@@ -278,7 +281,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
       pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
                                                           sd = sigma(LA_model)), 
                                             launch_angle = lm.preds + noise)
-      
+
       for(i in 1:length(pred_angles$launch_angle)){
         # Sample a launch speed around their actual attack angle
         hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
@@ -291,7 +294,6 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
         # Add that launch speed to vector as the predicted launch speed 
         EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
       }
-      
       # Create modeled data for this attack angle
       modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
       preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
@@ -314,13 +316,72 @@ predicted_LA <- read_rds("private_data/LA_model.rds")
 
 #Test for Trout
 mtrout <- batter_all_1621 %>%
-  filter(year == 2019, player_name == "Trout, Mike") %>% clean_edges()
+  filter(year == 2019, player_name == "Trout, Mike") %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
 
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
 mtrout_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, mtrout) 
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
+
+mtrout_attack_angles_plot <- mtrout_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = mtrout$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Mike Trout")
+
+#average woba is so high because of the hits it sampled as being 
+#successfully fair if hit at 30 degree attack angle, they were WELL
+#hit balls
+max_attack <- mtrout_sample_hits %>% filter(attack_angle == 30) %>% 
+  summarize(mean(woba_value, na.rm = TRUE))
+
+#Test for Heyward
+jhey <- batter_all_1621 %>%
+  filter(player_name == "Heyward, Jason") %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
+
+jhey_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, jhey) 
+jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
+                                           jhey$attack_angle[1], jhey_woba)
+jhey_attack_angles_plot <- jhey_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+                                #Didn't plateau like Trout for some reason
+  theme_bw()+
+  geom_vline(xintercept = jhey$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Jason Heyward")
+
+#Test for Kemp
+tkemp <- batter_all_1621 %>%
+  filter(player_name == "Kemp, Tony") %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
+
+tkemp_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, tkemp)
+tkemp_woba_values <- test_all_attack_sample(woba_model, predicted_LA, tkemp_sample_hits, tkemp,
+                                            tkemp$attack_angle[1], tkemp_woba)
+
+tkemp_attack_angles_plot <- tkemp_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = tkemp$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Tony Kemp")
 
 
 
