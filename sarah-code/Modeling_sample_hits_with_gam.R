@@ -316,7 +316,8 @@ predicted_LA <- read_rds("private_data/LA_model.rds")
 
 #Test for Trout
 mtrout <- batter_all_1621 %>%
-  filter(year == 2019, player_name == "Trout, Mike") %>% 
+  #Need to get all they pitches he swung at in 2019
+  filter(year == 2019, player_name == "Trout, Mike", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
   left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 
@@ -344,7 +345,7 @@ max_attack <- mtrout_sample_hits %>% filter(attack_angle == 30) %>%
 
 #Test for Heyward
 jhey <- batter_all_1621 %>%
-  filter(player_name == "Heyward, Jason") %>% 
+  filter(year == 2019, player_name == "Heyward, Jason", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
   left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
@@ -364,7 +365,7 @@ jhey_attack_angles_plot <- jhey_woba_values %>%
 
 #Test for Kemp
 tkemp <- batter_all_1621 %>%
-  filter(player_name == "Kemp, Tony") %>% 
+  filter(year == 2019, player_name == "Kemp, Tony", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
   left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
