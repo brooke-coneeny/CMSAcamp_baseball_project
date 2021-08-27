@@ -235,7 +235,7 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
   sample_hits <- player_data
   sample_hits <- sample_hits[0,]
   #Repeat this process for all 31 attack angles we are looking at
-  for(possible_attack in 0:30){
+  for(possible_attack in 0:40){
     player_data$attack_angle <- possible_attack
     #Get the whether there is contact using threshold of .22
     prob_contact <- predict(contact_model, newdata = player_data, type = "response")
@@ -263,13 +263,13 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
   
   # Initialize vectors for results
-  original_attack <- c(rep(orig_attack, times=31))
-  original_woba <- c(rep(orig_woba, times = 31))
-  possible_attack_vec <- c(0:30)
+  original_attack <- c(rep(orig_attack, times=41))
+  original_woba <- c(rep(orig_woba, times = 41))
+  possible_attack_vec <- c(0:40)
   predicted_woba <- c()
   avg_predicted_woba <- c()
   
-  for(possible_attack in 0:30){
+  for(possible_attack in 0:40){
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
     # Repeat 10 times
     for(n in 1:10){
@@ -323,6 +323,7 @@ mtrout <- batter_all_1621 %>%
 
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
+#After about 40 Trout didn't have any fair balls
 mtrout_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, mtrout) 
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
@@ -370,6 +371,7 @@ tkemp <- batter_all_1621 %>%
   clean_edges()
 tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
 
+#Kemp doesn't have any fairs after about 35 (so make sure the function that calculates woba stops there)
 tkemp_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, tkemp)
 tkemp_woba_values <- test_all_attack_sample(woba_model, predicted_LA, tkemp_sample_hits, tkemp,
                                             tkemp$attack_angle[1], tkemp_woba)
