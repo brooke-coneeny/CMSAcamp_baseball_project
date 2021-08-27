@@ -42,8 +42,8 @@ batter_all <- batter_all %>%
   mutate(description2 = case_when(description %in% c("automatic_ball", "ball", "blocked_ball", "intent_ball") ~ "ball", 
                                   description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
                                                      "missed_bunt", "pitchout", "called_strike") ~ "other", 
-                                  description %in% c("foul", "foul_tip") ~ "foul", 
-                                  description %in% c("swinging_strike", "swinging_strike_blocked") ~ "swinging_strike",
+                                  description %in% c("foul") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked","foul_tip") ~ "swinging_strike",
                                   description %in% c("hit_into_play", "hit_into_play_no_out", "hit_into_play_score") ~ "in_play",
                                   TRUE ~ description)) %>%
   #Using Adam's recommended physics equations to calculate the approach angle of the pitch
@@ -84,9 +84,22 @@ contact_batter_all <- hit_in_play %>%
   filter(balls_in_play >= 50) %>%
   left_join(contact_all, by=c("player_name", "year")) %>%
   left_join(attack_angles, by = c("player_name", "year")) %>%
+  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+  mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
+                                pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
+                                pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
+                                TRUE ~ pitch_type)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
+# Reflect the lefties plate x values to match the righties.  
+contact_dataset_lefty <- contact_batter_all %>%
+  filter(stand == "L") %>%
+  mutate(plate_x = -1*plate_x)
 
+contact_dataset_rest <- contact_batter_all %>%
+  filter(stand != "L")
+
+contact_batter_all <- bind_rows(contact_dataset_rest, contact_dataset_lefty)
 ####################################################################################################################################
 
 #Selecting only the variables we are interested in 
@@ -166,28 +179,7 @@ contact_batter_all <- contact_batter_all %>%
                                   contact_prob >= contact_threshold ~ 1)) 
 
 
-########################################################################################################
 
-#once we FINALLY have a set of pitches that they hit over the season for that attack angle, we get 
-#the launch angles for these pitches and pass it all into the wOBA calculation to get the graph!
-
-########################################################################################################
-
-
-Notes: 
-  
-- making a gam with these types of variables 
-  - pitch type
-  - release speed
-  - zone
-  - stand
-  - release spin rate
-
-- only use pitches that we thought were contact, then determine fair vs foul, run through original process 
-- will take different attack angles, find out if they made contact and if fair or foul
-- then from there find LA and woba 
-
-- for EDA try and break up continuous variables into different segments 
   
 
 
