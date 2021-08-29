@@ -7,7 +7,10 @@ library(tidyverse)
 library(readr)
 
 player_wobas <- read_csv("public_data/woba_2021data.csv")
+batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
+batter_all_2020 <- read_rds("private_data/all2020data.rds")
+batter_all <- rbind(batter_all_2019, batter_all_2020, batter_all_2021)
 
 # Create scatterplot of launch angle vs. exit velocity. Color by the outcome
 # of the batted ball. This is where we first begin to see the J-shape of singles. 
@@ -196,3 +199,53 @@ batter_all_2021 %>%
   geom_bar(position = "fill")+
   facet_wrap(~if_fielding_alignment, ncol = 1)+
   theme_minimal()
+
+############################################################################
+# What does the launch angle versus wOBA graph look like specifically for hitters 
+#that are struggling to reach higher exit velocities?
+
+#get all balls in play  
+in_play <- batter_all %>%
+  filter(description == "hit_into_play") %>%
+  select(launch_angle, woba_value, player_name, launch_speed) 
+
+#filter for batters that have at least 50 batted balls over the past 3 seasons
+batted_ball_count <- batter_all %>%
+  filter(description == "hit_into_play") %>%
+  filter(!is.na(launch_angle), !is.na(launch_speed)) %>%
+  select(launch_angle, woba_value, player_name, launch_speed) %>%
+  group_by(player_name) %>%
+  count()%>%
+  filter(n>=50)
+
+#find the max EV for players with a maximum exit velocity of less than 106 mph across 2019-2021. 
+#Filter for players that had at least 50 batted balls during this time. No one had maximum EV of less than 
+#100 mph that had at least 50 batted balls. Divide hitters into those with a max EV of 100-103 mph and 
+#103-106 mph. 
+max_EV_grouped <- batter_all %>%
+  filter(description == "hit_into_play", 
+         launch_speed >0 & launch_speed < 120) %>%
+  group_by(player_name) %>%
+  mutate(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV <= 106 & max_EV>50) %>%
+  mutate(n_batted_balls = n()) %>%
+  filter(n_batted_balls >= 50) %>%
+  mutate(EV_group = cut(max_EV, breaks = c(0, 100, 103, 106), 
+                        labels = c("<100 EV Hitters", "100-103+ EV Hitters", "103-106 EV Hitters"))) %>%
+  select(player_name, max_EV, EV_group, n_batted_balls, launch_angle, launch_speed, woba_value)
+
+# create the graph - the maximum wOBA for these lower launch angle hitters seems to be occurring
+#around 13 degrees and then generally declining from there. 
+max_EV_grouped %>%
+  ggplot(aes(x=launch_angle, y = woba_value, color = EV_group)) +
+  geom_smooth(method = "loess", span = .2, se = FALSE)+
+  coord_cartesian(ylim=c(0,1), xlim=c(-40,60)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))+
+  scale_color_manual(values = c("red", "blue"))+
+  theme_bw()+
+  theme(legend.title = element_blank())+
+  labs(x= "Launch Angle",
+       y = "wOBA",
+       title = "wOBA by Launch Angle")
+
