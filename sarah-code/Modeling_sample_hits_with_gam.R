@@ -386,5 +386,88 @@ tkemp_attack_angles_plot <- tkemp_woba_values %>%
        y = "Predicted wOBA",
        title = "Tony Kemp")
 
+#David Fletcher
+dfletcher <- batter_all_1621 %>%
+  filter(year == 2019, player_name == "Fletcher, David", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+dfletcher_woba <- mean(dfletcher$woba_value, na.rm = TRUE)
 
+dfletcher_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, dfletcher)
+dfletcher_woba_values <- test_all_attack_sample(woba_model, predicted_LA, dfletcher_sample_hits, dfletcher,
+                                            dfletcher$attack_angle[1], dfletcher_woba)
+
+dfletcher_attack_angles_plot <- dfletcher_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = dfletcher$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "David Fletcher")
+
+#Whit Merrifield
+wmerrifield <- batter_all_1621 %>%
+  filter(year == 2019, player_name == "Merrifield, Whit", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+wmerrifield_woba <- mean(wmerrifield$woba_value, na.rm = TRUE)
+
+wmerrifield_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, wmerrifield)
+wmerrifield_woba_values <- test_all_attack_sample(woba_model, predicted_LA, wmerrifield_sample_hits, wmerrifield,
+                                            wmerrifield$attack_angle[1], wmerrifield_woba)
+
+wmerrifield_attack_angles_plot <- wmerrifield_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = wmerrifield$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Whit Merrifield")
+
+#Freddy Galvis
+fgalvis <- batter_all_1621 %>%
+  filter(year == 2019, player_name == "Galvis, Freddy", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+fgalvis_woba <- mean(fgalvis$woba_value, na.rm = TRUE)
+
+fgalvis_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, fgalvis)
+fgalvis_woba_values <- test_all_attack_sample(woba_model, predicted_LA, fgalvis_sample_hits, fgalvis,
+                                            fgalvis$attack_angle[1], fgalvis_woba)
+
+fgalvis_attack_angles_plot <- fgalvis_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = fgalvis$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Freddy Galvis")
+
+#Dee Strange-Gordon
+dsgordon <- batter_all_1621 %>%
+  filter(year == 2019, player_name == "Strange-Gordon, Dee", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  clean_edges()
+dsgordon_woba <- mean(dsgordon$woba_value, na.rm = TRUE)
+
+#Kemp doesn't have any fairs after about 35 (so make sure the function that calculates woba stops there)
+dsgordon_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, dsgordon)
+dsgordon_woba_values <- test_all_attack_sample(woba_model, predicted_LA, dsgordon_sample_hits, dsgordon,
+                                            dsgordon$attack_angle[1], dsgordon_woba)
+
+dsgordon_attack_angles_plot <- dsgordon_woba_values %>%
+  ggplot(aes(x = possible_attack, y = predicted_woba)) +
+  geom_line()+
+  geom_smooth()+
+  theme_bw()+
+  geom_vline(xintercept = dsgordon$attack_angle, color="red", linetype = "dashed")+
+  labs(x = "Possible Attack Angles",
+       y = "Predicted wOBA",
+       title = "Dee Strange-Gordon")
 
