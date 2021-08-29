@@ -232,7 +232,9 @@ max_EV_grouped <- batter_all %>%
   filter(n_batted_balls >= 50) %>%
   mutate(EV_group = cut(max_EV, breaks = c(0, 100, 103, 106), 
                         labels = c("<100 EV Hitters", "100-103+ EV Hitters", "103-106 EV Hitters"))) %>%
-  select(player_name, max_EV, EV_group, n_batted_balls, launch_angle, launch_speed, woba_value)
+  select(player_name, max_EV, EV_group, n_batted_balls, launch_angle, launch_speed, woba_value) %>%
+  group_by(player_name) %>%
+  count()
 
 # create the graph - the maximum wOBA for these lower launch angle hitters seems to be occurring
 #around 13 degrees and then generally declining from there. 
@@ -243,6 +245,32 @@ max_EV_grouped %>%
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))+
   scale_color_manual(values = c("red", "blue"))+
+  theme_bw()+
+  theme(legend.title = element_blank())+
+  labs(x= "Launch Angle",
+       y = "wOBA",
+       title = "wOBA by Launch Angle")
+
+#similar process but more player specific and only using 2019 data. Chose players Whit 
+#Merrifield (max EV 105), David Fletcher (104), Dee Strange-Gorden (102), and Freddy Galvis (106)
+batter_all_2019 %>%
+  filter(description == "hit_into_play", 
+         launch_speed >0 & launch_speed < 120) %>%
+  group_by(player_name) %>%
+  mutate(max_EV = max(launch_speed, na.rm = TRUE)) %>%
+  filter(max_EV <= 106 & max_EV>50) %>%
+  mutate(n_batted_balls = n()) %>%
+  filter(n_batted_balls >= 50) %>%
+  mutate(EV_group = cut(max_EV, breaks = c(0, 100, 103, 106), 
+                        labels = c("<100 EV Hitters", "100-103+ EV Hitters", "103-106 EV Hitters"))) %>%
+  select(player_name, max_EV, EV_group, n_batted_balls, launch_angle, launch_speed, woba_value) %>%
+  filter(player_name %in% c("Merrifield, Whit", "Fletcher, David", "Galvis, Freddy", "Strange-Gordon, Dee")) %>%
+  ggplot(aes(x=launch_angle, y = woba_value, color = player_name)) +
+  geom_smooth(method = "loess", span = .2, se = FALSE)+
+  coord_cartesian(ylim=c(0,1), xlim=c(-40,60)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))+
+  scale_color_manual(values = c("darkgreen", "brown4", "darkgoldenrod1", "cyan3"))+
   theme_bw()+
   theme(legend.title = element_blank())+
   labs(x= "Launch Angle",
