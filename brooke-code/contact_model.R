@@ -80,15 +80,16 @@ contact_all <- batter_all %>%
 
 #Combining with the attack angles of each player in each year 
 #Combining with number of balls in play by player and year 
-contact_batter_all <- hit_in_play %>%
-  filter(balls_in_play >= 50) %>%
-  left_join(contact_all, by=c("player_name", "year")) %>%
-  left_join(attack_angles, by = c("player_name", "year")) %>%
-  filter(pitch_type %!in% c("PO") & !is.na(pitch_type)) %>%
+contact_batter_all <- contactr_all %>%
+  left_join(hit_in_play, by=c("player_name", "year")) %>%
+  left_join(attack_angles, by = c("player_name", "year"))
+
+contact_batter_all <- contact_batter_all %>%
   mutate(pitch_type = case_when(pitch_type %in% c("CH", "EP") ~ "Offspeed", 
                                 pitch_type %in% c("CS", "CU", "KC", "KN", "SC", "SL") ~ "Breaking", 
                                 pitch_type %in% c("FA", "FO", "FS", "FT", "SI", "FC", "FF") ~ "Fastball", 
                                 TRUE ~ pitch_type)) %>%
+  filter(!is.na(pitch_type)) %>%
   filter(plate_z <=5 & plate_z >= -2.5)
 
 # Reflect the lefties plate x values to match the righties.  
@@ -122,12 +123,12 @@ set.seed(315)
 sample_rows <- sample(nrow(player_num_pitches), smp_size)
 
 player_year_train <- player_num_pitches[sample_rows,]
-player_year_test <- player_year[-sample_rows,]
+player_year_test <- player_num_pitches[-sample_rows,]
 
 contact_train <- contact_batter_all %>%
   right_join(player_year_train, by = c("player_name", "year")) 
 
-contact_test <- contact_dataset %>%
+contact_test <- contact_batter_all %>%
   right_join(player_year_test, by = c("player_name", "year"))
 
 #Creating a GAM model which predicts probability of contact for any given hit given attack angle and pitch height
