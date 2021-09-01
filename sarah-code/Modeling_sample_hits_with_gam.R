@@ -268,11 +268,16 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   possible_attack_vec <- c(0:30)
   predicted_woba <- c()
   avg_predicted_woba <- c()
+  #For printing actual modeled data when needed
+  pred_launch <- c()
+  pred_velo <- c()
+  attack <- c()
+  pred_woba <- c()
   
   for(possible_attack in 0:30){
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
     # Repeat 10 times
-    for(n in 1:10){
+    #for(n in 1:10){
       EV_vector4 <- vector()    # To hold launch speeds for this function
       
       # Find the possible launch angle for this attack angle
@@ -300,11 +305,20 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
       xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
       
       predicted_woba <- c(predicted_woba, xwOBA)
-    }
+      
+      #For printing modeled data
+      pred_launch <- c(pred_launch, modeled_data$launch_angle)
+      pred_velo <- c(pred_velo, modeled_data$launch_speed)
+      attack <- c(attack, rep(possible_attack, times = nrow(modeled_data)))
+      pred_woba <- c(pred_woba, preds$gam.preds)
+   # }
     avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
   }
-  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
-                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  # return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
+  #                original_woba = original_woba, predicted_woba = avg_predicted_woba))
+
+    return (tibble(predicted_launch = pred_launch, predicted_speed = pred_velo, attack_angle = attack, 
+                   wOBAcon = pred_woba))
   
 }
 
