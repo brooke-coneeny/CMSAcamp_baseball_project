@@ -259,8 +259,21 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
 
 ########################################################################################################
 
-#Modified function from previous presentation to get predicted wobas for each attack angle
+#Modification of the function from part 1 of research to get final woba values
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
+  #Get some values we need to calculate real woba
+  walk <- nrow(year_data %>%
+                        filter(events == "walk"))
+  hbp <- nrow(year_data %>%
+                       filter(events == "hit_by_pitch"))
+  ibb <- nrow(year_data %>%
+                       filter(events == "intent_walk"))
+  sf <- nrow(year_data %>%
+                      filter(events == "sac_fly"))
+  ab <- nrow(year_data %>%
+                      #By setting pitch number equal to 1 we get all of the first pitches for all of his
+                      #plate appearances (thus counting the number of plate appearances)
+                      filter(pitch_number == 1))
   
   # Initialize vectors for results
   original_attack <- c(rep(orig_attack, times=31))
@@ -269,56 +282,56 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   predicted_woba <- c()
   avg_predicted_woba <- c()
   #For printing actual modeled data when needed
-  pred_launch <- c()
-  pred_velo <- c()
-  attack <- c()
-  pred_woba <- c()
+  # pred_launch <- c()
+  # pred_velo <- c()
+  # attack <- c()
+  # pred_woba <- c()
   
   for(possible_attack in 0:30){
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
     # Repeat 10 times
-    #for(n in 1:10){
-      EV_vector4 <- vector()    # To hold launch speeds for this function
-      
-      # Find the possible launch angle for this attack angle
-      #current_attack$attack_angle <- possible_attack
-      pred_angles <- tibble(lm.preds = predict(LA_model, newdata = current_attack))
-      pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
-                                                          sd = sigma(LA_model)), 
-                                            launch_angle = lm.preds + noise)
-
-      for(i in 1:length(pred_angles$launch_angle)){
-        # Sample a launch speed around their actual attack angle
-        hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
-          #not just the ones we sampled as potential hit into play
-          filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
-                   orig_attack-3 & !is.na(launch_speed))
-        # Randomly sample 1 exit velocity form similar hits
-        EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
-        pred_EV <- hits_at_angle[EV_sample_index,] 
-        # Add that launch speed to vector as the predicted launch speed 
-        EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
-      }
-      # Create modeled data for this attack angle
-      modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
-      preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
-      xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
-      
-      predicted_woba <- c(predicted_woba, xwOBA)
-      
-      #For printing modeled data
-      pred_launch <- c(pred_launch, modeled_data$launch_angle)
-      pred_velo <- c(pred_velo, modeled_data$launch_speed)
-      attack <- c(attack, rep(possible_attack, times = nrow(modeled_data)))
-      pred_woba <- c(pred_woba, preds$gam.preds)
-   # }
+    for(n in 1:10){
+    EV_vector4 <- vector()    # To hold launch speeds for this function
+    
+    # Find the possible launch angle for this attack angle
+    #current_attack$attack_angle <- possible_attack
+    pred_angles <- tibble(lm.preds = predict(LA_model, newdata = current_attack))
+    pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                        sd = sigma(LA_model)), 
+                                          launch_angle = lm.preds + noise)
+    
+    for(i in 1:length(pred_angles$launch_angle)){
+      # Sample a launch speed around their actual attack angle
+      hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
+        #not just the ones we sampled as potential hit into play
+        filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                 orig_attack-3 & !is.na(launch_speed))
+      # Randomly sample 1 exit velocity form similar hits
+      EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+      pred_EV <- hits_at_angle[EV_sample_index,] 
+      # Add that launch speed to vector as the predicted launch speed 
+      EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+    }
+    # Create modeled data for this attack angle
+    modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+    preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+    xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+    
+    predicted_woba <- c(predicted_woba, xwOBA)
+    
+    #For printing modeled data
+    # pred_launch <- c(pred_launch, modeled_data$launch_angle)
+    # pred_velo <- c(pred_velo, modeled_data$launch_speed)
+    # attack <- c(attack, rep(possible_attack, times = nrow(modeled_data)))
+    # pred_woba <- c(pred_woba, preds$gam.preds)
+    }
     avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
   }
-  # return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec, 
-  #                original_woba = original_woba, predicted_woba = avg_predicted_woba))
-
-    return (tibble(predicted_launch = pred_launch, predicted_speed = pred_velo, attack_angle = attack, 
-                   wOBAcon = pred_woba))
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec,
+                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+  
+  # return (tibble(predicted_launch = pred_launch, predicted_speed = pred_velo, attack_angle = attack, 
+  #                wOBAcon = pred_woba))
   
 }
 
@@ -470,7 +483,6 @@ dsgordon <- batter_all_1621 %>%
   clean_edges()
 dsgordon_woba <- mean(dsgordon$woba_value, na.rm = TRUE)
 
-#Kemp doesn't have any fairs after about 35 (so make sure the function that calculates woba stops there)
 dsgordon_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, dsgordon)
 dsgordon_woba_values <- test_all_attack_sample(woba_model, predicted_LA, dsgordon_sample_hits, dsgordon,
                                             dsgordon$attack_angle[1], dsgordon_woba)
