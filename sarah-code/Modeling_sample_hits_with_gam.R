@@ -328,7 +328,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec,
                  original_woba = original_woba, predicted_woba = avg_predicted_woba))
   
-  # return (tibble(predicted_launch = pred_launch, predicted_speed = pred_velo, attack_angle = attack, 
+  # return (tibble(predicted_launch = pred_launch, predicted_speed = pred_velo, attack_angle = attack,
   #                wOBAcon = pred_woba))
   
 }
