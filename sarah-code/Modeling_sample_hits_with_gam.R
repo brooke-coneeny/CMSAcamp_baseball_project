@@ -268,8 +268,6 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
                        filter(events == "hit_by_pitch"))
   ibb <- nrow(year_data %>%
                        filter(events == "intent_walk"))
-  sf <- nrow(year_data %>%
-                      filter(events == "sac_fly"))
   ab <- nrow(year_data %>%
                       #By setting pitch number equal to 1 we get all of the first pitches for all of his
                       #plate appearances (thus counting the number of plate appearances)
@@ -352,6 +350,8 @@ mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
 #After about 40 Trout didn't have any fair balls
 mtrout_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, mtrout) 
+#Pushing so Brooke can help without being able to run the models associated with this function
+write_rds(mtrout_sample_hits, "public_data/mtrout_sample_hits.rds")
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
 
@@ -379,6 +379,7 @@ jhey <- batter_all_1621 %>%
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 
 jhey_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, jhey) 
+write_rds(jhey_sample_hits, "public_data/jhey_sample_hits.rds")
 jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
                                            jhey$attack_angle[1], jhey_woba)
 jhey_attack_angles_plot <- jhey_woba_values %>%
@@ -400,6 +401,7 @@ tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
 
 #Kemp doesn't have any fairs after about 35 (so make sure the function that calculates woba stops there)
 tkemp_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, tkemp)
+write_rds(tkemp_sample_hits, "public_data/tkemp_sample_hits.rds")
 tkemp_woba_values <- test_all_attack_sample(woba_model, predicted_LA, tkemp_sample_hits, tkemp,
                                             tkemp$attack_angle[1], tkemp_woba)
 
@@ -421,6 +423,7 @@ dfletcher <- batter_all_1621 %>%
 dfletcher_woba <- mean(dfletcher$woba_value, na.rm = TRUE)
 
 dfletcher_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, dfletcher)
+write_rds(dfletcher_sample_hits, "public_data/dfletcher_sample_hits.rds")
 dfletcher_woba_values <- test_all_attack_sample(woba_model, predicted_LA, dfletcher_sample_hits, dfletcher,
                                             dfletcher$attack_angle[1], dfletcher_woba)
 
@@ -442,6 +445,7 @@ wmerrifield <- batter_all_1621 %>%
 wmerrifield_woba <- mean(wmerrifield$woba_value, na.rm = TRUE)
 
 wmerrifield_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, wmerrifield)
+write_rds(wmerrifield_sample_hits, "public_data/wmerrifield_sample_hits.rds")
 wmerrifield_woba_values <- test_all_attack_sample(woba_model, predicted_LA, wmerrifield_sample_hits, wmerrifield,
                                             wmerrifield$attack_angle[1], wmerrifield_woba)
 
@@ -463,6 +467,7 @@ fgalvis <- batter_all_1621 %>%
 fgalvis_woba <- mean(fgalvis$woba_value, na.rm = TRUE)
 
 fgalvis_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, fgalvis)
+write_rds(fgalvis_sample_hits, "public_data/fgalvis_sample_hits.rds")
 fgalvis_woba_values <- test_all_attack_sample(woba_model, predicted_LA, fgalvis_sample_hits, fgalvis,
                                             fgalvis$attack_angle[1], fgalvis_woba)
 
@@ -484,6 +489,7 @@ dsgordon <- batter_all_1621 %>%
 dsgordon_woba <- mean(dsgordon$woba_value, na.rm = TRUE)
 
 dsgordon_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, dsgordon)
+write_rds(dsgordon_sample_hits, "public_data/dsgordon_sample_hits.rds")
 dsgordon_woba_values <- test_all_attack_sample(woba_model, predicted_LA, dsgordon_sample_hits, dsgordon,
                                             dsgordon$attack_angle[1], dsgordon_woba)
 
