@@ -60,6 +60,29 @@ batter_all_1621 <- batter_all_1621 %>%
          approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
                                    (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
 
+#add attack angles to the set
+batter_all_1621 <- batter_all_1621 %>%
+  filter(description == "hit_into_play") %>%
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  filter(attack_angle >0 & attack_angle <=25) %>%
+  mutate(attack_angle = round(attack_angle,0))
+
+#calculate sacs per hit into play
+sacs_per_hit_into_play <- batter_all_1621 %>%
+  filter(events %!in% c("catcher_interf", "game_advisory")) %>%
+  mutate(event_sac_fly = case_when(events == "sac_fly" ~ 1, 
+                                   TRUE ~0)) %>%
+  group_by(attack_angle, event_sac_fly) %>%
+  count() %>%
+  pivot_wider(id_cols = attack_angle, names_from = event_sac_fly, values_from = n) %>%
+  rename(`sac`=`1`, `other`=`0`) %>%
+  mutate(sacs_per_hip = sac/(sac+other)) %>%
+  select(attack_angle, sacs_per_hip)
+
+#add this column to batter_all_1621
+batter_all_1621 <- batter_all_1621 %>%
+  left_join(sacs_per_hit_into_play, by=c("attack_angle"))
+
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
 attack_angles <- read_rds("public_data/attack_angles_1621.rds")
@@ -85,7 +108,6 @@ contact_batted_balls <- batter_all_1621 %>%
 contact_dataset <- batted_balls %>%
   filter(balls_in_play >= 50) %>%
   left_join(contact_batted_balls, by=c("year", "player_name")) %>%
-  left_join(attack_angles, by = c("year", "player_name")) %>%
   select(player_name, year, attack_angle, launch_speed, launch_angle, balls_in_play, pitch_type, 
          woba_value, description, description2, events, balls, strikes, plate_z, contact, plate_x, 
          release_speed, pfx_z, stand, approach_angle) %>%
@@ -287,6 +309,8 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   
   for(possible_attack in 0:30){
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
+    #This ensures we end up with the correct value for sacs per hit in play at the possible attack angle
+    sf <- (batter_all_1621 %>% filter(attack_angle == possible_attack))$sacs_per_hip[1]
     # Repeat 10 times
     for(n in 1:10){
     EV_vector4 <- vector()    # To hold launch speeds for this function
@@ -313,7 +337,9 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
     # Create modeled data for this attack angle
     modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
     preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
-    xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+    #xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
+    xwOBAcon <- sum(preds$gam.preds, na.rm = TRUE)
+    xwOBA <- ((.69*walk + .72*hbp +xwOBAcon)/(ab + walk + ibb + sf + hbp))
     
     predicted_woba <- c(predicted_woba, xwOBA)
     
@@ -324,6 +350,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
     # pred_woba <- c(pred_woba, preds$gam.preds)
     }
     avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+    
   }
   return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec,
                  original_woba = original_woba, predicted_woba = avg_predicted_woba))
@@ -364,12 +391,6 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
-
-#average woba is so high because of the hits it sampled as being 
-#successfully fair if hit at 30 degree attack angle, they were WELL
-#hit balls
-max_attack <- mtrout_sample_hits %>% filter(attack_angle == 30) %>% 
-  summarize(mean(woba_value, na.rm = TRUE))
 
 #Test for Heyward
 jhey <- batter_all_1621 %>%
