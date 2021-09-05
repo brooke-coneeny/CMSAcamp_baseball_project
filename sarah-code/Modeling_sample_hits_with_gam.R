@@ -86,6 +86,9 @@ batter_all_1621 <- batter_all_1621 %>%
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
 attack_angles <- read_rds("public_data/attack_angles_1621.rds")
+#Load in the models from the first section of the research
+woba_model<- read_rds("public_data/woba_model.rds")
+predicted_LA <- read_rds("private_data/LA_model.rds")
 
 ####################################################################################################################################
 #This GAM intends to model swing and miss probability based on different launch angles (in other words, predicting
@@ -227,6 +230,30 @@ write_rds(fair_foul_gam, "private_data/fair_foul_gam_model.rds")
 fair_foul_gam <- read_rds("private_data/fair_foul_gam_model.rds")
 
 ########################################################################################################
+#Testing how to divide up the woba predictions to get 4 categorical responses (out, 1B, 2B, 3B, HR)
+
+made_up_data <- expand.grid(launch_angle = seq(-50,70,2), launch_speed = seq(50,110,2))
+made_up_preds <- tibble(gam.preds = predict(woba_model, newdata = made_up_data)) 
+test_data <- bind_cols(made_up_data, made_up_preds)
+
+#Here is where we can manipulate how we divide to get one value per event
+test_data <- test_data %>%
+  #This should say if gam.preds is less than .445 make it 0 (an out), between .445 and 1.08 make it .89
+  #(1B), between 1.08 and 1.445 make it 1.27 (2B), between 1.445 and 1.86 make it 1.62 (3B), and finally,
+  #over 1.86 is 2.10 (HR)
+    #This essentially divides the space between each boundary in half and gives those values closer to 
+    #a particular boundary that value
+  mutate(preds_grouped = ifelse(gam.preds <= .445, 0, ifelse(gam.preds <= 1.08, .89, 
+                                ifelse(gam.preds <= 1.445, 1.27, ifelse(gam.preds <= 1.86, 1.62, 2.10)))))
+
+summary(woba_model_splines)
+gam.check(woba_model_splines)
+
+raster_check <- test_data %>%
+  ggplot(aes(x=launch_angle, y = launch_speed, fill = preds_grouped)) +
+  geom_raster() + theme_bw()
+
+########################################################################################################
 #Creating functions so we can go from their full season pitches to a 
 #subset that they might have hit at a different attack angle
 
@@ -338,7 +365,13 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
     modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
     preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
     #xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
-    xwOBAcon <- sum(preds$gam.preds, na.rm = TRUE)
+    #xwOBAcon <- sum(preds$gam.preds, na.rm = TRUE)
+    preds <- preds %>% mutate(preds_grouped = ifelse(gam.preds <= .445, 0, 
+                                                     ifelse(gam.preds <= 1.08, .89, 
+                                                            ifelse(gam.preds <= 1.445, 1.27, 
+                                                                   ifelse(gam.preds <= 1.86, 1.62, 2.10)))))
+    xwOBAcon <- sum(preds$preds_grouped, na.rm = TRUE)
+    
     xwOBA <- ((.69*walk + .72*hbp +xwOBAcon)/(ab + walk + ibb + sf + hbp))
     
     predicted_woba <- c(predicted_woba, xwOBA)
@@ -361,11 +394,6 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
 }
 
 ########################################################################################################
-#Load in the models from the first section of the research
-woba_model<- read_rds("public_data/woba_model.rds")
-predicted_LA <- read_rds("private_data/LA_model.rds")
-
-
 #Test for Trout
 mtrout <- batter_all_1621 %>%
   #Need to get all they pitches he swung at in 2019
