@@ -398,7 +398,6 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
 mtrout <- batter_all_1621 %>%
   #Need to get all they pitches he swung at in 2019
   filter(year == 2019, player_name == "Trout, Mike", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
@@ -423,7 +422,6 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
 #Test for Heyward
 jhey <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Heyward, Jason", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 
@@ -444,7 +442,6 @@ jhey_attack_angles_plot <- jhey_woba_values %>%
 #Test for Kemp
 tkemp <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Kemp, Tony", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 tkemp_woba <- mean(tkemp$woba_value, na.rm = TRUE)
 
@@ -467,7 +464,6 @@ tkemp_attack_angles_plot <- tkemp_woba_values %>%
 #David Fletcher
 dfletcher <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Fletcher, David", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 dfletcher_woba <- mean(dfletcher$woba_value, na.rm = TRUE)
 
@@ -489,7 +485,6 @@ dfletcher_attack_angles_plot <- dfletcher_woba_values %>%
 #Whit Merrifield
 wmerrifield <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Merrifield, Whit", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 wmerrifield_woba <- mean(wmerrifield$woba_value, na.rm = TRUE)
 
@@ -511,7 +506,6 @@ wmerrifield_attack_angles_plot <- wmerrifield_woba_values %>%
 #Freddy Galvis
 fgalvis <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Galvis, Freddy", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 fgalvis_woba <- mean(fgalvis$woba_value, na.rm = TRUE)
 
@@ -533,7 +527,6 @@ fgalvis_attack_angles_plot <- fgalvis_woba_values %>%
 #Dee Strange-Gordon
 dsgordon <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Strange-Gordon, Dee", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
-  left_join(attack_angles, by = c("player_name", "year")) %>%
   clean_edges()
 dsgordon_woba <- mean(dsgordon$woba_value, na.rm = TRUE)
 
