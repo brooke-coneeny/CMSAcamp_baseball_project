@@ -337,7 +337,8 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   for(possible_attack in 0:30){
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
     #This ensures we end up with the correct value for sacs per hit in play at the possible attack angle
-    sf <- (batter_all_1621 %>% filter(attack_angle == possible_attack))$sacs_per_hip[1]
+    #You multiply by the number of observations (balls hit into play) for this attack angle
+    sf <- ((batter_all_1621 %>% filter(attack_angle == possible_attack))$sacs_per_hip[1])*nrow(current_attack)
     # Repeat 10 times
     for(n in 1:10){
     EV_vector4 <- vector()    # To hold launch speeds for this function
