@@ -13,9 +13,33 @@ trout_data <- read_rds("public_data/mtrout_sample_hits.rds")
 heyward_data <- read_rds("public_data/jhey_sample_hits.rds")
 kemp_data <- read_rds("public_data/tkemp_sample_hits.rds")
 
+batter_all_2019 <- read_rds("private_data/all2019data.rds")
+
 # Load in the models
 woba_model <- read_rds("public_data/woba_model.rds")
 linear_model <- read_rds("public_data/LA_model.rds")
+
+# Choose player to work with 
+batter_data <- trout_data
+
+####################################################################################################################################
+
+# Calculating sacs per hit into play 
+
+sacs_per_hit_into_play <- trout_data %>%
+  mutate(event_sac_fly = case_when(events == "sac_fly" ~ 1, TRUE ~ 0)) %>%
+  group_by(attack_angle, event_sac_fly) %>%
+  count() %>%
+  pivot_wider(id_cols = attack_angle, names_from = event_sac_fly, values_from = n) %>%
+  rename('sac' = '1', 'other' = '0') %>%
+  replace(is.na(.), 0) %>%
+  mutate(sacs_per_hip = sac/(sac+other)) %>%
+  select(attack_angle, sacs_per_hip)
+
+# Add this column to the data set
+
+batter_data <- batter_data %>%
+  left_join(sacs_per_hit_into_play, by = c("attack_angle"))
 
 ####################################################################################################################################
 
@@ -107,7 +131,7 @@ predicted_woba_function<- function(woba_model, linear_model, batter_data){
 ####################################################################################################################################
 
 # Cleaning the data
-batter_data <- kemp_data %>%
+batter_data <- batter_data %>%
   filter(!is.na(plate_z), !is.na(launch_angle), !is.na(launch_speed), !is.na(attack_angle)) %>%
   clean_edges()
 
@@ -135,55 +159,78 @@ woba_predictions_box_plot <- predicted_values %>%
 
 # Let us try and group the predicted woba values into single, double, triple, home runs 
 
+# Need these numbers for woba equation 
 # singles = 0.888
 # doubles = 1.271
 # triples = 1.616
 # home runs = 2.101
 
-woba_values <- batter_data %>%
-  filter(!is.na(events)) %>%
-  group_by(woba_value, events) %>%
+# Used this to find what value was given to each event
+# single = 0.9, double = 1.25, triple = 1.6, home run = 2
+woba_variables <- batter_all_2019 %>%
+  mutate(
+    events_group = case_when(
+      events %in% c("field_out", "other_out", "grounded_into_double_play", "double_play", 
+                    "fielders_choice_out", "force_out", "sac_fly", "sac_fly_double_play", "sac_bunt_double_play", 
+                    "field_error", "sac_fly", "fielders_choice", "triple_play") ~ "out",
+      events == "single" ~ "single",
+      events == "double" ~ "double", 
+      events == "triple" ~ "triple", 
+      events == "home_run" ~ "home run", 
+      TRUE ~ "other")
+  ) %>%
+  select(events_group, woba_value) %>%
+  group_by(events_group, woba_value) %>%
   count()
 
-quantile(predicted_values$gam.preds, probs = c(0.74, 0.76, 0.78, 0.80, 0.82, 0.84, 0.86, 0.88, 0.90, 0.92, 0.94, 0.96, 0.98, 1))
+# Looking at woba predictions and seeing how they fall in line with woba value of each event 
+woba_predictions <- predicted_values %>%
+  ggplot(aes(x = gam.preds)) +
+  geom_density() + 
+  geom_vline(xintercept = 0.9, color = "red") +
+  geom_vline(xintercept = 1.25, color = "red") +
+  geom_vline(xintercept = 1.6, color = "red") +
+  geom_vline(xintercept = 2, color = "red") +
+  theme_bw()
 
-# 86th percentile is 0.8767641 (so 84th-88th is single) (0.86-0.91)
+# Idea for categorizing predicted values 
+# The predicted wobas which fall into these categories will be assigned an event
 
-# 92nd percentile is 1.2753117 (so 88th-92nd is double) (0.87-1.3)
+# Singles:  0.9
+    # difference between 1.25 - 0.9 = 0.35 / 2 = 0.175
+    # singles will range from 0.9-0.175 to 0.9+0.175
+    # 0.725 - 1.075
 
-# 95th percentile is 1.7594451 (so 92nd-96th is triple) (1.3-1.9)
+# Doubles:  1.25
+    # difference between 1.6 - 1.25 = 0.35 / 2 = 0.175
+    # double will range from 1.25-0.175 to 1.25+0.175
+    # 1.075 - 1.425
 
-# 99th percentile is 1.9924783 (so 96th-100th is hr) (1.9-2.1)
+# Triples:  1.6
+    # difference between 2 - 1.6 = 0.4 / 2 = 0.2
+    # triples will range from 1.6-0.175 to 1.6+0.2
+    # 1.425 - 1.8
 
-# Categorizing the hits by percentiles listed above 
-batter_data <- batter_data %>%
-  mutate(pred_outcome = case_when(
-    pred_woba < quantile(predicted_values$gam.preds, probs = c(0.84)) ~ "Out",
-    pred_woba >= quantile(predicted_values$gam.preds, probs = c(0.84)) & 
-      pred_woba < quantile(predicted_values$gam.preds, probs = c(0.88)) ~ "single",
-    pred_woba >= quantile(predicted_values$gam.preds, probs = c(0.88)) &
-      pred_woba < quantile(predicted_values$gam.preds, probs = c(0.92)) ~ "double",
-    pred_woba >= quantile(predicted_values$gam.preds, probs = c(0.92)) &
-      pred_woba < quantile(predicted_values$gam.preds, probs = c(0.96)) ~ "triple",
-    pred_woba >= quantile(predicted_values$gam.preds, probs = c(0.96)) ~ "home run"
-  )) 
+# Home Runs: 2
+    # will be 1.8 and up 
 
-# Find number of each events
-num_events <- batter_data %>%
-  group_by(pred_outcome) %>%
+
+# Categorize predicted woba values into events
+# Find out how many of each event occured 
+categorize_woba_values <- batter_data %>%
+  mutate(
+    pred_event_from_woba = case_when(
+      pred_woba < 0.725 ~ "out",
+      pred_woba >= 0.725 & pred_woba < 1.075 ~ "single",
+      pred_woba >= 1.075 & pred_woba < 1.425 ~ "double",
+      pred_woba >= 1.425 & pred_woba < 1.8 ~ "triple",
+      pred_woba >= 1.8 ~ "home run"
+    )
+  ) %>%
+  group_by(pred_event_from_woba) %>%
   summarise(num = n())
 
-# 56 doubles, 56 home runs, 1170 outs, 55 singles , 56 triples
-eq_num <- (0.888 * 55) + (1.271 * 112) + (1.616 * 56) + (2.101 * 56)
-eq_den <- (56 + 56 + 1170 + 55 + 56)
-woba_calc <- eq_num / eq_den
-
-trout_woba <- mean(batter_data$woba_value)
-  
-
-
-
-
-
-
+# Result: 36 doubles, 88 home runs, 293 singles, 29 triples, 1655 outs 
+eq_num <- (0.888 * 293) + (1.271 * 36) + (1.616 * 29) + (2.101 * 88)
+eq_den <- (293 + 36 + 29 + 88 + 1655)
 
