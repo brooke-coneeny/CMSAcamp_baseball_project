@@ -32,6 +32,7 @@ batter_all_2018 <- read_rds("private_data/all2018data.rds")
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
 batter_all_2020 <- read_rds("private_data/all2020data.rds")
 batter_all_2021 <- read_rds("private_data/all2021data.rds")
+attack_angles <- read_rds("public_data/attack_angles_1621.rds")
 
 batter_all_2016 <- batter_all_2016 %>%
   mutate(year = "2016")
@@ -85,7 +86,7 @@ batter_all_1621 <- batter_all_1621 %>%
 
 batted_balls <- read_rds("public_data/batted_balls.rds")
 strikeout_eda <- read_rds("public_data/strikeout_eda.rds")
-attack_angles <- read_rds("public_data/attack_angles_1621.rds")
+
 #Load in the models from the first section of the research
 woba_model<- read_rds("public_data/woba_model.rds")
 predicted_LA <- read_rds("private_data/LA_model.rds")
@@ -294,7 +295,8 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
     #Get the subset of player_data that predicted contact
     player_contact <- player_data %>% filter(pred_contact == 1)
     
-    #Get whether it is fair using threshold of .5
+    #Get whether it is fair using threshold of .5 (but you only need to check if the predicted contact
+    #hits would have been fair)
     prob_fair <- predict(fair_foul_model, newdata = player_contact, type = "response")
     player_contact <- player_contact %>% mutate(prob_fair = prob_fair,
                               pred_fair = ifelse(prob_fair >= .5, 1, 0))
@@ -310,7 +312,8 @@ get_sample_hits <- function(contact_model, fair_foul_model, player_data){
 
 #Modification of the function from part 1 of research to get final woba values
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
-  #Get some values we need to calculate real woba
+  #Get some values we need to calculate real wOBA - these we can take from the orignal year's data because
+  #we are assuming everything they didn't swing at stays the same
   walk <- nrow(year_data %>%
                         filter(events == "walk"))
   hbp <- nrow(year_data %>%
@@ -335,11 +338,14 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
   # pred_woba <- c()
   
   for(possible_attack in 0:30){
+    #Get the set of data hit fair for this attack angle
     current_attack <- player_data %>% filter(attack_angle == possible_attack)
+    
     #This ensures we end up with the correct value for sacs per hit in play at the possible attack angle
     #You multiply by the number of observations (balls hit into play) for this attack angle
     sf <- ((batter_all_1621 %>% filter(attack_angle == possible_attack))$sacs_per_hip[1])*nrow(current_attack)
-    # Repeat 10 times
+    
+    # Repeat 10 times - helps with any randomness in the wOBA calculations
     for(n in 1:10){
     EV_vector4 <- vector()    # To hold launch speeds for this function
     
@@ -353,27 +359,33 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
     for(i in 1:length(pred_angles$launch_angle)){
       # Sample a launch speed around their actual attack angle
       hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
-        #not just the ones we sampled as potential hit into play
+        #not just the ones we sampled as potential hit into play which is why we use year_data
         filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
                  orig_attack-3 & !is.na(launch_speed))
-      # Randomly sample 1 exit velocity form similar hits
+      # Randomly sample 1 exit velocity from similar hits
       EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
       pred_EV <- hits_at_angle[EV_sample_index,] 
       # Add that launch speed to vector as the predicted launch speed 
       EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
     }
+    
     # Create modeled data for this attack angle
     modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
     preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
     #xwOBA <- mean(preds$gam.preds, na.rm = TRUE)
     #xwOBAcon <- sum(preds$gam.preds, na.rm = TRUE)
+    
+    #We need to group the predicted wOBAs so that they are one of (out, single, double, triple, HR) ;
+      #the way we did this was to take the value and assign it to whatever event it was closes to
     preds <- preds %>% mutate(preds_grouped = ifelse(gam.preds <= .445, 0, 
                                                      ifelse(gam.preds <= 1.08, .89, 
                                                             ifelse(gam.preds <= 1.445, 1.27, 
                                                                    ifelse(gam.preds <= 1.86, 1.62, 2.10)))))
+    #This works because it is just number of outs * value of out + number of singles * value of single + ...
     xwOBAcon <- sum(preds$preds_grouped, na.rm = TRUE)
     
-    xwOBA <- ((.69*walk + .72*hbp +xwOBAcon)/(ab + walk + ibb + sf + hbp))
+    #This is the wOBA formula from fangraphs: https://library.fangraphs.com/offense/woba/
+    xwOBA <- ((.69*walk + .72*hbp + xwOBAcon)/(ab + walk + ibb + sf + hbp))
     
     predicted_woba <- c(predicted_woba, xwOBA)
     
@@ -397,7 +409,7 @@ test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data,
 ########################################################################################################
 #Test for Trout
 mtrout <- batter_all_1621 %>%
-  #Need to get all they pitches he swung at in 2019
+  #Need to get all the pitches he swung at in 2019
   filter(year == 2019, player_name == "Trout, Mike", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
   clean_edges()
 

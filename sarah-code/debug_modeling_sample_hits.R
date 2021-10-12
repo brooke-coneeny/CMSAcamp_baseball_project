@@ -5,6 +5,7 @@
 
 #get all balls in play  
 batter_all_2019 <- read_rds("private_data/all2019data.rds")
+attack_angles <- read_rds("public_data/attack_angles_1621.rds")
 batter_all_2019 <- batter_all_2019 %>%
   mutate(year = "2019")
 in_play_2019 <- batter_all_2019 %>%
@@ -47,7 +48,7 @@ wOBA_angle_velo_graph_2 <- max_EV_2019_grouped2 %>%
   scale_color_manual(values = c("red", "blue"))+
   theme_bw()+
   theme(legend.title = element_blank())+
-  labs(x= "Launch Angle",
+  labs(x= "Attack Angle",
        y = "wOBAcon",
        title = "wOBA by Attack Angle")
 
@@ -65,7 +66,7 @@ wOBA_angle_velo_graph_3 <- max_EV_2019_grouped3 %>%
   scale_color_manual(values = c("black", "orange", "blue"))+
   theme_bw()+
   theme(legend.title = element_blank())+
-  labs(x= "Launch Angle",
+  labs(x= "Attack Angle",
        y = "wOBAcon",
        title = "wOBA by Attack Angle")
 
