@@ -92,7 +92,7 @@ contact_dataset %>%
   #geom_vline(xintercept=0.5, color = "red", linetype="dashed")+
   #geom_vline(xintercept=1.75, color = "red", linetype="dashed")+
   theme_minimal()+
-  labs(y="", x="", title = "Density of vertical pitch movement (inches)", 
+  labs(y="", x="", title = "Density of vertical pitch movement (ft)", 
        subtitle = "On pitches swung at in the MLB 2016-2021") +
   theme(plot.title.position = "plot", 
         plot.title = element_text(size=10), 
@@ -115,7 +115,7 @@ contact_dataset %>%
   labs(y = "swing and miss percentage", 
        title = "At higher attack angles, swing and miss percentage tends to be higher on pitches with more vertical movement", 
        color = "Attack angle group", 
-       x= "vertical movement (inches)")+
+       x= "vertical movement (feet)")+
   theme(plot.title.position = "plot", 
         plot.title = element_text(size=9), 
         axis.title = element_text(size=8), 
@@ -280,6 +280,8 @@ player_exp_swing_miss <- contact_py_test %>%
                values_to = "percent") %>%
   mutate(predicted = case_when(predicted == "exp_swing_miss" ~ "expected", 
                                predicted == "swing_miss_percent" ~ "actual"))
+
+write_rds(player_exp_swing_miss, "public_data/player_exp_swing_miss.rds")
 
 player_exp_swing_miss %>%
   ggplot(aes(x=attack_angle, y=percent, color = predicted))+
