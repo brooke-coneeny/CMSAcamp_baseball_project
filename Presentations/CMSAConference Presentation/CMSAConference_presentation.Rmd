@@ -53,11 +53,11 @@ style_mono_accent(base_color = "#cc002b")
 library(baseballr)
 library(tidyverse)
 library(mgcv)
-batter_all_2020 <- read_rds("private_data/all2020data.rds")
-batter_all_2019 <- read_rds("private_data/all2019data.rds")
+batter_all_2020 <- read_rds("../../private_data/all2020data.rds")
+batter_all_2019 <- read_rds("../../private_data/all2019data.rds")
 batter_all_2019hp <- batter_all_2019 %>%
   filter(description == "hit_into_play")
-batter_all_2021 <- read_rds("private_data/all2021data.rds")
+batter_all_2021 <- read_rds("../../private_data/all2021data.rds")
 batter_all <- rbind(batter_all_2019, batter_all_2020, batter_all_2021)
 
 data_example <- batter_all_2019 %>%
@@ -295,8 +295,9 @@ batter_all_2019 %>%
 .pull-right[
 **Our model's output** 
 ```{r, echo=FALSE, fig.width=6, fig.height = 4, message=FALSE, warning=FALSE}
-woba_model2 <- read_rds("public_data/woba_model.rds")
+woba_model2 <- read_rds("../../public_data/woba_model.rds")
 
+made_up_data <- expand.grid(launch_angle = seq(-50,70,2), launch_speed = seq(50,110,2))
 made_up_preds2 <- tibble(gam.preds = predict(woba_model2, newdata = made_up_data)) 
 test2 <- bind_cols(made_up_data, made_up_preds2)
 
@@ -366,7 +367,7 @@ knitr::include_graphics("https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/u
 
 .pull-left[
 ```{r, echo=FALSE, fig.height = 3, fig.width = 5}
-predicted_LA <- read_rds("public_data/LA_model.rds")
+predicted_LA <- read_rds("../../public_data/LA_model.rds")
 
 clean_edges <- function (data){
   for(i in 1:length(data$launch_angle)){
@@ -394,7 +395,7 @@ mtrout <- batter_all_2019hp %>%
   clean_edges()
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
-mtrout_attack_angles <- read_rds("public_data/mtrout_attack_angles.rds")
+mtrout_attack_angles <- read_rds("../../public_data/mtrout_attack_angles.rds")
 mtrout_attack_angles %>%
   ggplot(aes(x = possible_attack, y = predicted_woba)) +
   geom_line()+
@@ -410,7 +411,7 @@ mtrout_attack_angles %>%
 
 .pull-right[
 ```{r, echo=FALSE, fig.height = 3, fig.width = 5}
-jhey_attack_angles <- read_rds("public_data/jhey_attack_angles.rds")
+jhey_attack_angles <- read_rds("../../public_data/jhey_attack_angles.rds")
 
 jhey <- batter_all_2019hp %>%
   filter(player_name == "Heyward, Jason"& !is.na(plate_z) & !is.na(launch_angle), !is.na(launch_speed))%>%
@@ -438,12 +439,12 @@ jhey_attack_angles %>%
 
 .pull-left[
 ```{r, echo=FALSE, fig.width=6, fig.height = 4}
-batter_all_2016 <- read_rds("../private_data/all2016data.rds")
-batter_all_2017 <- read_rds("../private_data/all2017data.rds")
-batter_all_2018 <- read_rds("../private_data/all2018data.rds")
-batter_all_2019 <- read_rds("../private_data/all2019data.rds")
-batter_all_2020 <- read_rds("../private_data/all2020data.rds")
-batter_all_2021 <- read_rds("../private_data/all2021data.rds")
+batter_all_2016 <- read_rds("../../private_data/all2016data.rds")
+batter_all_2017 <- read_rds("../../private_data/all2017data.rds")
+batter_all_2018 <- read_rds("../../private_data/all2018data.rds")
+batter_all_2019 <- read_rds("../../private_data/all2019data.rds")
+batter_all_2020 <- read_rds("../../private_data/all2020data.rds")
+batter_all_2021 <- read_rds("../../private_data/all2021data.rds")
 
 batter_all_2016 <- batter_all_2016 %>%
   mutate(year = "2016")
@@ -558,7 +559,7 @@ strikeout_eda %>%
 
 .pull-left[
 ```{r, echo=FALSE, fig.width=6, fig.height = 4}
-player_exp_swing_miss <- read_rds("public_data/player_exp_swing_miss.rds")
+player_exp_swing_miss <- read_rds("../../public_data/player_exp_swing_miss.rds")
 player_exp_swing_miss %>%
   ggplot(aes(x=attack_angle, y=percent, color = predicted))+
   geom_point(alpha = 0.7)+

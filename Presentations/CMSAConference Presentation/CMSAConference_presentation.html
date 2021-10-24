@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
+    <meta name="date" content="2021-10-24" />
+    <script src="CMSAConference_presentation_files/header-attrs-2.8/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Maximizing wOBA with Launch Angle and Exit Velocity
+### Sarah Sult, Brooke Coneeny, Erin Franke
+### 2021-10-24
+
+---
+
+
+
+
+
+
+## Motivation
+
+- Two of the most popular stats in the MLB have recently been launch angle and exit velocity 
+
+  - We wondered: can we prescribe a wOBA maximizing launch angle for an individual player 
+  based on their power profile?
+--
+
+## First, a few definitions: 
+
+- **wOBA** stands for weighted on base percentage.
+  - We are only looking at batted balls (meaning no walks or hit-by-pitches) in this project, because that is what we have launch angle and exit velocity data on.
+    - Each of the types of batted balls (out, single, double, triple, homers) are given a value - 0, 0.9, 1.25, 1.6, 2 - respectively
+
+- **Launch angle** means the vertical angle that the ball leaves a player’s bat after making contact. 
+
+- **Exit velocity** measures the speed (in mph) the ball comes off the bat. 
+
+---
+## Data
+
+- The majority of our analysis uses 2019 MLB data from Baseball Savant
+- Variables
+  - Focus on modeling **wOBA** using **launch angle** and **exit velocity**
+  - Other relevant variables we looked at during the exploratory process include **batter handedness, 
+  pitcher handedness, infield alignment, pitch type, at-bat outcome, location of where the ball was fielded**
+- Data is structured on a pitch-by-pitch basis
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; player &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; exit velocity &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; launch angle &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; wOBA &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; outcome &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Zobrist, Ben &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 88.9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Mazara, Nomar &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 90.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Duda, Lucas &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 106.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; McCann, Brian &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 96.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 29 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Hernández, Enrique &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 89.3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; single &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; Muncy, Max &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 97.4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 44 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; field_out &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+## Hitters with high exit velocities have the ability to perform significantly better at launch angles in the mid 20s   
+
+
+.pull-left[
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-3-1.png" width="504" /&gt;
+
+]
+.pull-right[
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-4-1.png" width="504" /&gt;
+]
+---
+# Hit outcome by launch angle and exit velocity 
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-5-1.png" width="1008" style="display: block; margin: auto;" /&gt;
+---
+#Breaking down the previous graph proportionally...
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-6-1.png" width="1008" style="display: block; margin: auto;" /&gt;
+
+### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
+
+.pull-left[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-7-1.png" width="576" style="display: block; margin: auto;" /&gt;
+]
+--
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-8-1.png" width="504" style="display: block; margin: auto;" /&gt;
+]
+---
+### Now how can we model these player recommendations? 
+
+.pull-left[
+- We will fit a **Generalized Additive Model, or GAM**, to **launch angle** and 
+**exit velocity** with the target **wOBA**
+
+  - GAMs have the ability to model complex *non-linear and non-monotonic* relationships between predictors and response variables, such as we see when we smooth the relationship between predictors **exit velocity** and **launch angle** with **wOBA**. 
+]
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-9-1.png" width="432" /&gt;
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-10-1.png" width="432" /&gt;
+]
+---
+### By using an interaction between launch angle and exit velocity in our GAM, we capture the true distribution of wOBA
+
+.pull-left[
+**Actual relationship**
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-11-1.png" width="432" /&gt;
+]
+.pull-right[
+**Our model's output** 
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-12-1.png" width="432" /&gt;
+]
+---
+### We further evaluated our model by taking the following steps 
+
+1) Compared our interaction model to the original additive model and a model with tensor 
+smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
+
+2) Tuned our **k** to **200** with cross validation to find where the **decrease in RMSE for each model had plateaued**
+
+  - Then used `gam.check()` to ensure the **k** we chose adequately represented to complexity of the relationship between variables. 
+
+3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
+
+4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
+
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-13-1.png" width="360" style="display: block; margin: auto;" /&gt;
+
+---
+## Using a player's attack angle to predict launch angles
+.pull-left[
+- A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
+
+- The attack angle is calculated by taking the **median of the player's top 10% highest launch speeds**
+
+- We then used this attack angle with pitch height to create a linear model which predicts a player's launch angles
+
+]
+
+.pull-right[
+&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Positive-768x309.jpg" width="60%" height="45%" style="display: block; margin: auto;" /&gt;
+
+&lt;img src="https://v6e8y6s7.stackpathcdn.com/2014site/wp-content/uploads/2018/11/Swing-Planes-Negative.png" width="60%" height="45%" style="display: block; margin: auto;" /&gt;
+]
+---
+### Adding in pitch height to find a maximum wOBA over different attack angles
+
+- When adjusting a player's attack angle, our linear model gives us a set of new predicted launch angles for each ball hit into play
+
+- Exit velocities were sampled to create a mock data set representing this player's balls hit into play due to their new attack angle
+
+- This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
+
+.pull-left[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-16-1.png" width="360" /&gt;
+
+]
+
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-17-1.png" width="360" /&gt;
+]
+
+---
+# Looking forward to the effects on K% rate
+
+- Sure, we can tell a player to increase or decrease their attack angle - but often times hitting with a steeper attack angle can be correlated with a higher strikeout rate, as seen in the graphs below. 
+
+- As a result, we determined it crucial that we update our model so that it take into account that when a player changes his attack angle, the pitches he receives and makes contact with will change. 
+
+.pull-left[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-18-1.png" width="432" /&gt;
+]
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-19-1.png" width="432" /&gt;
+]
+---
+# Attacking the assumption with a contact GAM
+- First created a GAM to predict which balls players will make contact with. 
+  - Defined contact as anything hit foul or into play. 
+  - Model predictors: 
+    - interaction between pitch height and horizontal pitch location 
+    - interaction between attack angle and pitch approach angle 
+    - pitch speed
+- Evaluated model on test data and chose to predict a swing and miss at a threshold of 0.22 in order to balance specificity and sensitivity
+  - 68.7% accuracy at predicting contact 
+  - 66.4% accuracy at predicting swing and misses
+
+---
+# Contact GAM - successes and problems 
+
+- Grouped players by name and year and found their attack angle and true swing and miss percentage and compared this to average proportion of swing and misses that player had from our model. 
+
+.pull-left[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" /&gt;
+]
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-21-1.png" width="432" /&gt;
+]
+
+---
+# Faster pitches with more spin further from the heart of the plate are fouled off more often
+.pull-left[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-22-1.png" width="432" /&gt;
+]
+.pull-right[
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-23-1.png" width="432" /&gt;
+]
+
+---
+# The fair-foul gam
+- Note to start: It's really hard to predict whether a ball will be hit fair or foul! It is so dependent on timing and that's really hard to measure. 
+- GAM uses predictors of:
+  - interaction between pitch height and horizontal pitch location 
+  - interaction between release speed and release spin rate 
+  - interaction between attack angle and approach angle 
+- Given contact, almost exactly 50% of balls are hit foul. 
+- Final fair-foul GAM was able to predict 52.7% of foul balls correctly and 63.7% of fair balls correctly for an overall accuracy of 58.2%. 
+
+---
+# Next slide
+
+
+----
+# What's going wrong?
+
+---
+# Thank you!
+If you would discuss this work further, please reach out to us: 
+  - Sarah Sult: sarahesult@gmail.com
+  - Brooke Coneeny: bconeen1@swarthmore.edu
+  - Erin Franke: efranke@macalester.edu
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
