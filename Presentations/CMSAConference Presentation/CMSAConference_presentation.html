@@ -226,10 +226,11 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 ]
 ---
 # Attacking the assumption with a contact GAM
-- First created a GAM to predict which balls players will make contact with. 
+
+- Changing the attack angle effects which pitches the batter will make contact with so we created a GAM to predict contact.
   - Defined contact as anything hit foul or into play. 
   - Model predictors: 
-    - interaction between pitch height and horizontal pitch location 
+    - interaction between pitch height and horizontal pitch location
     - interaction between attack angle and pitch approach angle 
     - pitch speed
 - Evaluated model on test data and chose to predict a swing and miss at a threshold of 0.22 in order to balance specificity and sensitivity
@@ -239,7 +240,7 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 ---
 # Contact GAM - successes and problems 
 
-- Grouped players by name and year and found their attack angle and true swing and miss percentage and compared this to average proportion of swing and misses that player had from our model. 
+- Grouped players by name and year and found their attack angle and true swing and miss percentage. We then compared the predicted values to the average proportion of swing and misses that player had from our model in order to test accuracy. 
 
 .pull-left[
 &lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" /&gt;
@@ -249,7 +250,10 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 ]
 
 ---
-# Faster pitches with more spin further from the heart of the plate are fouled off more often
+# Once we narrowed down how contact changes with attack angle, we explored how attack angle effects a batters ability to hit pitches fair.
+
+- Our main hypothesis was that faster pitches with more spin further from the heart of the plate are fouled off more often, which can be seen in the graphs below
+
 .pull-left[
 &lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-22-1.png" width="432" /&gt;
 ]
@@ -260,7 +264,8 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 ---
 # The fair-foul gam
 - Note to start: It's really hard to predict whether a ball will be hit fair or foul! It is so dependent on timing and that's really hard to measure. 
-- GAM uses predictors of:
+- We decided to once again create a GAM model, this time modeling fair or foul balls. 
+- The GAM uses predictors of:
   - interaction between pitch height and horizontal pitch location 
   - interaction between release speed and release spin rate 
   - interaction between attack angle and approach angle 
@@ -268,11 +273,23 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - Final fair-foul GAM was able to predict 52.7% of foul balls correctly and 63.7% of fair balls correctly for an overall accuracy of 58.2%. 
 
 ---
-# Next slide
-
+# Implementing Contact &amp; Fair/Foul GAMs
+- We created a function which took our contact GAM, fair/foul GAM, and player data
+- This function returned an updated player data set containing the pitches which were predicted to be hit fair 
+- We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
 
 ----
 # What's going wrong?
+- Theoretically, once a batter starts swinging at higher attack angles, they will begin to miss more pitches. As they miss more pitches, the wOBA of a batter should decrease considering they will be getting on base less often.
+- However, when we graph our results we find that wOBA continues to increase with attack angle without plateauing. 
+
+.pull-left[
+
+]
+
+.pull-right[
+
+]
 
 ---
 # Thank you!

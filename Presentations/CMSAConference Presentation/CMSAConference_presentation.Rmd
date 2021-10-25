@@ -700,6 +700,178 @@ batter_all_1621 %>%
 
 .pull-left[
 ```{r, echo=FALSE, fig.width=6, fig.height = 4}
+'%!in%' <- Negate('%in%')
+attack_angles <- read_rds("../../public_data/attack_angles_1621.rds")
+contact_gam <- read_rds("../../private_data/contact_gam_model.rds")
+fair_foul_gam <- read_rds("../../private_data/fair_foul_gam_model.rds")
+woba_model<- read_rds("../../public_data/woba_model.rds")
+predicted_LA <- read_rds("../../private_data/LA_model.rds")
+
+#This was just how the data was set up for this part of the project:
+batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
+                             batter_all_2019, batter_all_2020, batter_all_2021)
+batter_all_1621 <- batter_all_1621 %>%
+  mutate(description2 = case_when(description %in% c("ball", "blocked_ball", "intent_ball") ~ "ball", 
+                                  description %in% c("bunt_foul_tip", "foul_bunt", "hit_by_pitch", 
+                                                     "missed_bunt", "pitchout") ~ "other", 
+                                  description %in% c("foul") ~ "foul", 
+                                  description %in% c("swinging_strike", "swinging_strike_blocked", "foul_tip") ~ "swinging_strike",
+                                  TRUE ~ description), 
+         #Using Adam's recommended physics equations to calculate the approach angle of the pitch
+         #Negative because of the direction of v and a vectors
+         approach_angle = -(atan((vz0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * az) / 
+                                   (vy0 + ((-vy0 - sqrt((vy0^2) - 2.0 * ay * (50.0 - 1.417))) / ay) * ay)) * 180.0/pi))
+
+#add attack angles to the set
+batter_all_1621 <- batter_all_1621 %>%
+  filter(description == "hit_into_play") %>%
+  left_join(attack_angles, by = c("player_name", "year")) %>%
+  filter(attack_angle >0 & attack_angle <=25) %>%
+  mutate(attack_angle = round(attack_angle,0))
+
+#calculate sacs per hit into play
+sacs_per_hit_into_play <- batter_all_1621 %>%
+  filter(events %!in% c("catcher_interf", "game_advisory")) %>%
+  mutate(event_sac_fly = case_when(events == "sac_fly" ~ 1, 
+                                   TRUE ~0)) %>%
+  group_by(attack_angle, event_sac_fly) %>%
+  count() %>%
+  pivot_wider(id_cols = attack_angle, names_from = event_sac_fly, values_from = n) %>%
+  rename(`sac`=`1`, `other`=`0`) %>%
+  mutate(sacs_per_hip = sac/(sac+other)) %>%
+  select(attack_angle, sacs_per_hip)
+
+#add this column to batter_all_1621
+batter_all_1621 <- batter_all_1621 %>%
+  left_join(sacs_per_hit_into_play, by=c("attack_angle"))
+
+#Now the functions used to test:
+clean_edges <- function (data){
+  for(i in 1:length(data$launch_angle)){
+    if(!is.na(data$launch_angle[i])){
+      if(data$launch_angle[i] < (mean(data$launch_angle, na.rm = TRUE)-2*sd(data$launch_angle, na.rm = TRUE))){
+        data$cleaned_launch_angle[i] <- (mean(data$launch_angle, na.rm = TRUE)-2*sd(data$launch_angle, na.rm = TRUE))
+      }
+      else if(data$launch_angle[i] > (mean(data$launch_angle, na.rm = TRUE)+2*sd(data$launch_angle, na.rm = TRUE))){
+        data$cleaned_launch_angle[i] <- (mean(data$launch_angle, na.rm = TRUE)+2*sd(data$launch_angle, na.rm = TRUE))
+      }
+      else{
+        data$cleaned_launch_angle[i]<-data$launch_angle[i]
+      }
+    }
+    else{
+      data$cleaned_launch_angle[i]<-data$launch_angle[i]
+    }
+  }
+  return (data)
+}
+
+get_sample_hits <- function(contact_model, fair_foul_model, player_data){
+  #Create an empty starting tibble
+  sample_hits <- player_data
+  sample_hits <- sample_hits[0,]
+  #Repeat this process for all 31 attack angles we are looking at
+  for(possible_attack in 0:30){
+    player_data$attack_angle <- possible_attack
+    #Get the whether there is contact using threshold of .22
+    prob_contact <- predict(contact_model, newdata = player_data, type = "response")
+    player_data <- player_data %>% mutate(pitch_prob_contact = prob_contact, 
+                                          pred_contact = ifelse(pitch_prob_contact >= .22, 1, 0))
+
+    #Get the subset of player_data that predicted contact
+    player_contact <- player_data %>% filter(pred_contact == 1)
+    
+    #Get whether it is fair using threshold of .5 (but you only need to check if the predicted contact
+    #hits would have been fair)
+    prob_fair <- predict(fair_foul_model, newdata = player_contact, type = "response")
+    player_contact <- player_contact %>% mutate(prob_fair = prob_fair,
+                              pred_fair = ifelse(prob_fair >= .5, 1, 0))
+    
+    #Get the subset of player_contact that predicted fair
+    player_fair <- player_contact %>% filter(pred_fair == 1)
+    sample_hits <- rbind(sample_hits, player_fair)
+  }
+  return (sample_hits)
+}
+
+test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
+  #Get some values we need to calculate real wOBA - these we can take from the orignal year's data because
+  #we are assuming everything they didn't swing at stays the same
+  walk <- nrow(year_data %>%
+                        filter(events == "walk"))
+  hbp <- nrow(year_data %>%
+                       filter(events == "hit_by_pitch"))
+  ibb <- nrow(year_data %>%
+                       filter(events == "intent_walk"))
+  ab <- nrow(year_data %>%
+                      #By setting pitch number equal to 1 we get all of the first pitches for all of his
+                      #plate appearances (thus counting the number of plate appearances)
+                      filter(pitch_number == 1))
+  
+  # Initialize vectors for results
+  original_attack <- c(rep(orig_attack, times=31))
+  original_woba <- c(rep(orig_woba, times = 31))
+  possible_attack_vec <- c(0:30)
+  predicted_woba <- c()
+  avg_predicted_woba <- c()
+  
+  for(possible_attack in 0:30){
+    #Get the set of data hit fair for this attack angle
+    current_attack <- player_data %>% filter(attack_angle == possible_attack)
+    
+    #This ensures we end up with the correct value for sacs per hit in play at the possible attack angle
+    #You multiply by the number of observations (balls hit into play) for this attack angle
+    sf <- ((batter_all_1621 %>% filter(attack_angle == possible_attack))$sacs_per_hip[1])*nrow(current_attack)
+    
+    # Repeat 10 times - helps with any randomness in the wOBA calculations
+    for(n in 1:10){
+    EV_vector4 <- vector()    # To hold launch speeds for this function
+    
+    # Find the possible launch angle for this attack angle
+    #current_attack$attack_angle <- possible_attack
+    pred_angles <- tibble(lm.preds = predict(LA_model, newdata = current_attack))
+    pred_angles <- pred_angles %>% mutate(noise = rnorm(n = length(pred_angles$lm.preds), mean = 0, 
+                                                        sd = sigma(LA_model)), 
+                                          launch_angle = lm.preds + noise)
+    
+    for(i in 1:length(pred_angles$launch_angle)){
+      # Sample a launch speed around their actual attack angle
+      hits_at_angle <- year_data %>%     #we want to sample exit velocities from his actual data
+        #not just the ones we sampled as potential hit into play which is why we use year_data
+        filter(cleaned_launch_angle <= orig_attack+3 & launch_angle >= 
+                 orig_attack-3 & !is.na(launch_speed))
+      # Randomly sample 1 exit velocity from similar hits
+      EV_sample_index <- sample(1:nrow(hits_at_angle), 1, replace = TRUE)
+      pred_EV <- hits_at_angle[EV_sample_index,] 
+      # Add that launch speed to vector as the predicted launch speed 
+      EV_vector4 <- c(EV_vector4, pred_EV$launch_speed)
+    }
+    
+    # Create modeled data for this attack angle
+    modeled_data <- tibble(launch_angle = pred_angles$launch_angle, launch_speed = EV_vector4)
+    preds <- tibble(gam.preds = predict(woba_model, newdata = modeled_data))  
+    
+    #We need to group the predicted wOBAs so that they are one of (out, single, double, triple, HR) ;
+      #the way we did this was to take the value and assign it to whatever event it was closes to
+    preds <- preds %>% mutate(preds_grouped = ifelse(gam.preds <= .445, 0, 
+                                                     ifelse(gam.preds <= 1.08, .89, 
+                                                            ifelse(gam.preds <= 1.445, 1.27, 
+                                                                   ifelse(gam.preds <= 1.86, 1.62, 2.10)))))
+    #This works because it is just number of outs * value of out + number of singles * value of single + ...
+    xwOBAcon <- sum(preds$preds_grouped, na.rm = TRUE)
+    
+    #This is the wOBA formula from fangraphs: https://library.fangraphs.com/offense/woba/
+    xwOBA <- ((.69*walk + .72*hbp + xwOBAcon)/(ab + walk + ibb + sf + hbp))
+    
+    predicted_woba <- c(predicted_woba, xwOBA)
+    }
+    avg_predicted_woba <- c(avg_predicted_woba, mean(predicted_woba))
+    
+  }
+  return (tibble(original_attack = original_attack, possible_attack = possible_attack_vec,
+                 original_woba = original_woba, predicted_woba = avg_predicted_woba))
+}
+
 #Test for Trout
 mtrout <- batter_all_1621 %>%
   #Need to get all the pitches he swung at in 2019
@@ -726,7 +898,7 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
 ]
 
 .pull-right[
-```{r, echo=FLASE, fig.width=6, fig.height=4}
+```{r, echo=FALSE, fig.width=6, fig.height=4}
 #Test for Heyward
 jhey <- batter_all_1621 %>%
   filter(year == 2019, player_name == "Heyward, Jason", description2 %in% c("foul", "hit_into_play", "foul_pitchout", "swinging_pitchout", "swinging_strike")) %>% 
@@ -734,7 +906,6 @@ jhey <- batter_all_1621 %>%
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 
 jhey_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, jhey) 
-write_rds(jhey_sample_hits, "public_data/jhey_sample_hits.rds")
 jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
                                            jhey$attack_angle[1], jhey_woba)
 jhey_attack_angles_plot <- jhey_woba_values %>%
