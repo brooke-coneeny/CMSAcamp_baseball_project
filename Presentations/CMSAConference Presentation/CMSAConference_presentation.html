@@ -4,7 +4,7 @@
     <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-10-24" />
+    <meta name="date" content="2021-10-26" />
     <script src="CMSAConference_presentation_files/header-attrs-2.8/header-attrs.js"></script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
@@ -14,7 +14,7 @@ class: center, middle, inverse, title-slide
 
 # Maximizing wOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-10-24
+### 2021-10-26
 
 ---
 
@@ -250,7 +250,7 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 ]
 
 ---
-# Once we narrowed down how contact changes with attack angle, we explored how attack angle effects a batters ability to hit pitches fair.
+### Once we narrowed down how contact changes with attack angle, we explored how attack angle effects a batters ability to hit pitches fair.
 
 - Our main hypothesis was that faster pitches with more spin further from the heart of the plate are fouled off more often, which can be seen in the graphs below
 
@@ -278,17 +278,17 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - This function returned an updated player data set containing the pitches which were predicted to be hit fair 
 - We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
 
-----
+---
 # What's going wrong?
 - Theoretically, once a batter starts swinging at higher attack angles, they will begin to miss more pitches. As they miss more pitches, the wOBA of a batter should decrease considering they will be getting on base less often.
 - However, when we graph our results we find that wOBA continues to increase with attack angle without plateauing. 
 
 .pull-left[
-
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-24-1.png" width="432" /&gt;
 ]
 
 .pull-right[
-
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-25-1.png" width="432" /&gt;
 ]
 
 ---

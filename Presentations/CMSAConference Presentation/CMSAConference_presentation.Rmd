@@ -582,7 +582,7 @@ player_exp_swing_miss %>%
 ]
 
 ---
-# Once we narrowed down how contact changes with attack angle, we explored how attack angle effects a batters ability to hit pitches fair.
+### Once we narrowed down how contact changes with attack angle, we explored how attack angle effects a batters ability to hit pitches fair.
 
 - Our main hypothesis was that faster pitches with more spin further from the heart of the plate are fouled off more often, which can be seen in the graphs below
 
@@ -693,7 +693,7 @@ batter_all_1621 %>%
 - This function returned an updated player data set containing the pitches which were predicted to be hit fair 
 - We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
 
-----
+---
 # What's going wrong?
 - Theoretically, once a batter starts swinging at higher attack angles, they will begin to miss more pitches. As they miss more pitches, the wOBA of a batter should decrease considering they will be getting on base less often.
 - However, when we graph our results we find that wOBA continues to increase with attack angle without plateauing. 
@@ -764,34 +764,6 @@ clean_edges <- function (data){
     }
   }
   return (data)
-}
-
-get_sample_hits <- function(contact_model, fair_foul_model, player_data){
-  #Create an empty starting tibble
-  sample_hits <- player_data
-  sample_hits <- sample_hits[0,]
-  #Repeat this process for all 31 attack angles we are looking at
-  for(possible_attack in 0:30){
-    player_data$attack_angle <- possible_attack
-    #Get the whether there is contact using threshold of .22
-    prob_contact <- predict(contact_model, newdata = player_data, type = "response")
-    player_data <- player_data %>% mutate(pitch_prob_contact = prob_contact, 
-                                          pred_contact = ifelse(pitch_prob_contact >= .22, 1, 0))
-
-    #Get the subset of player_data that predicted contact
-    player_contact <- player_data %>% filter(pred_contact == 1)
-    
-    #Get whether it is fair using threshold of .5 (but you only need to check if the predicted contact
-    #hits would have been fair)
-    prob_fair <- predict(fair_foul_model, newdata = player_contact, type = "response")
-    player_contact <- player_contact %>% mutate(prob_fair = prob_fair,
-                              pred_fair = ifelse(prob_fair >= .5, 1, 0))
-    
-    #Get the subset of player_contact that predicted fair
-    player_fair <- player_contact %>% filter(pred_fair == 1)
-    sample_hits <- rbind(sample_hits, player_fair)
-  }
-  return (sample_hits)
 }
 
 test_all_attack_sample <- function(woba_model, LA_model, player_data, year_data, orig_attack, orig_woba){
@@ -880,8 +852,7 @@ mtrout <- batter_all_1621 %>%
 
 mtrout_woba <- mean(mtrout$woba_value, na.rm = TRUE)
 
-#After about 40 Trout didn't have any fair balls
-mtrout_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, mtrout) 
+mtrout_sample_hits <- read_rds("../../public_data/mtrout_sample_hits.rds")
 mtrout_woba_values <- test_all_attack_sample(woba_model, predicted_LA, mtrout_sample_hits, mtrout,
                                              mtrout$attack_angle[1], mtrout_woba)
 
@@ -894,6 +865,8 @@ mtrout_attack_angles_plot <- mtrout_woba_values %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Mike Trout")
+
+mtrout_attack_angles_plot
 ```
 ]
 
@@ -905,7 +878,7 @@ jhey <- batter_all_1621 %>%
   clean_edges()
 jhey_woba <- mean(jhey$woba_value, na.rm = TRUE)
 
-jhey_sample_hits <- get_sample_hits(contact_gam, fair_foul_gam, jhey) 
+jhey_sample_hits <- read_rds("../../public_data/jhey_sample_hits.rds") 
 jhey_woba_values <- test_all_attack_sample(woba_model, predicted_LA, jhey_sample_hits, jhey,
                                            jhey$attack_angle[1], jhey_woba)
 jhey_attack_angles_plot <- jhey_woba_values %>%
@@ -917,6 +890,8 @@ jhey_attack_angles_plot <- jhey_woba_values %>%
   labs(x = "Possible Attack Angles",
        y = "Predicted wOBA",
        title = "Jason Heyward")
+
+jhey_attack_angles_plot
 ```
 ]
 
