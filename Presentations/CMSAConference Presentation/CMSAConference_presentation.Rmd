@@ -139,9 +139,8 @@ wOBA_angle_velo_graph_3
 # Hit outcome by launch angle and exit velocity 
 
 ```{r, fig.width = 14, fig.height = 7, echo = FALSE, fig.align='center'}
-library(nationalparkcolors)
 library(ggtext)
-pal2 <- park_palette("Everglades")
+pal2 <- c("darkgreen", "goldenrod", "coral3", "cadetblue", "cyan3")
 
 batter_all_2019 %>%
   filter(description == "hit_into_play") %>%
@@ -546,9 +545,9 @@ strikeout_eda %>%
 - Changing the attack angle effects which pitches the batter will make contact with so we created a GAM to predict contact.
   - Defined contact as anything hit foul or into play. 
   - Model predictors: 
-    - interaction between pitch height and horizontal pitch location
-    - interaction between attack angle and pitch approach angle 
-    - pitch speed
+         - interaction between pitch height and horizontal pitch location
+         - interaction between attack angle and pitch approach angle 
+         - pitch speed
 - Evaluated model on test data and chose to predict a swing and miss at a threshold of 0.22 in order to balance specificity and sensitivity
   - 68.7% accuracy at predicting contact 
   - 66.4% accuracy at predicting swing and misses
@@ -692,6 +691,8 @@ batter_all_1621 %>%
 - We created a function which took our contact GAM, fair/foul GAM, and player data
 - This function returned an updated player data set containing the pitches which were predicted to be hit fair 
 - We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
+
+
 
 ---
 # What's going wrong?
