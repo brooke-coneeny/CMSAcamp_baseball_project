@@ -4,8 +4,8 @@
     <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-10-26" />
-    <script src="CMSAConference_presentation_files/header-attrs-2.8/header-attrs.js"></script>
+    <meta name="date" content="2021-10-30" />
+    <script src="CMSAConference_presentation_files/header-attrs-2.10/header-attrs.js"></script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -14,7 +14,7 @@ class: center, middle, inverse, title-slide
 
 # Maximizing wOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-10-26
+### 2021-10-30
 
 ---
 
@@ -230,9 +230,9 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - Changing the attack angle effects which pitches the batter will make contact with so we created a GAM to predict contact.
   - Defined contact as anything hit foul or into play. 
   - Model predictors: 
-    - interaction between pitch height and horizontal pitch location
-    - interaction between attack angle and pitch approach angle 
-    - pitch speed
+         - interaction between pitch height and horizontal pitch location
+         - interaction between attack angle and pitch approach angle 
+         - pitch speed
 - Evaluated model on test data and chose to predict a swing and miss at a threshold of 0.22 in order to balance specificity and sensitivity
   - 68.7% accuracy at predicting contact 
   - 66.4% accuracy at predicting swing and misses
@@ -277,6 +277,8 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - We created a function which took our contact GAM, fair/foul GAM, and player data
 - This function returned an updated player data set containing the pitches which were predicted to be hit fair 
 - We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
+
+`$$wOBA = \frac{.69*uBB + .72*HBP + .89*1B + 1.27*2B + 1.62*3B + 2.1*HR}{AB + BB - IBB + SF + HBP}$$`
 
 ---
 # What's going wrong?

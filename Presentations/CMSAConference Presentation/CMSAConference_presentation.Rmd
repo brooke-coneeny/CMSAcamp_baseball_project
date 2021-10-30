@@ -692,7 +692,7 @@ batter_all_1621 %>%
 - This function returned an updated player data set containing the pitches which were predicted to be hit fair 
 - We then sent this new dataset into a function similar to our original, except now returning a predicted wOBA for all pitches, not only those which batters made contact with
 
-
+$$wOBA = \frac{.69*uBB + .72*HBP + .89*1B + 1.27*2B + 1.62*3B + 2.1*HR}{AB + BB - IBB + SF + HBP}$$
 
 ---
 # What's going wrong?
@@ -706,7 +706,6 @@ attack_angles <- read_rds("../../public_data/attack_angles_1621.rds")
 contact_gam <- read_rds("../../private_data/contact_gam_model.rds")
 fair_foul_gam <- read_rds("../../private_data/fair_foul_gam_model.rds")
 woba_model<- read_rds("../../public_data/woba_model.rds")
-predicted_LA <- read_rds("../../private_data/LA_model.rds")
 
 #This was just how the data was set up for this part of the project:
 batter_all_1621 <- bind_rows(batter_all_2016, batter_all_2017, batter_all_2018, 
