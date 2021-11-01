@@ -8,3 +8,5 @@ Click [here](http://www.stat.cmu.edu/cmsac/summer2021/) for the link to a 10 min
 Click [here](https://sarahsult.github.io/cmsacamp_baseball_project/Presentations/Final%20Short%20Presentation/Shortened_Presentation.html) for the presentation slides to the 10 minute video.
 
 Click [here](https://sarahsult.github.io/cmsacamp_baseball_project/Presentations/Final%20Presentations/Full_Presentation.html) for the presentation slides to the department.
+
+Click [here](https://sarahsult.github.io/cmsacamp_baseball_project/Presentations/CMSAConference%20Presentation/CMSAConference_presentation.html#1) for the presentation slides for the CMSAConference.
