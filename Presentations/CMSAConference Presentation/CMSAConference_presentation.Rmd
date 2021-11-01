@@ -192,7 +192,7 @@ batter_all_2019 %>%
   labs(x = "launch angle", y= "", fill = "")+
   theme_minimal()
 ```
-
+---
 ### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
 
 .pull-left[
@@ -314,28 +314,7 @@ test2 %>%
 ```
 ]
 ---
-### We further evaluated our model by taking the following steps 
 
-1) Compared our interaction model to the original additive model and a model with tensor 
-smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
-
-2) Tuned our **k** to **200** with cross validation to find where the **decrease in RMSE for each model had plateaued**
-
-  - Then used `gam.check()` to ensure the **k** we chose adequately represented to complexity of the relationship between variables. 
-
-3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
-
-4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
-
-```{r, echo = FALSE, fig.width=5, fig.height=3, fig.align='center'}
-vis.gam(x=woba_model2,  
-        view = c("launch_angle", "launch_speed"), #variables
-        plot.type = "contour", #kind of plot
-        too.far = 0.05, #indicates what type of predictions should not be plotted because they are too far from the actual data, scaled from 0 to 1. The smaller the number, more area is not supported by data 
-        nlevels = 20)
-```
-
----
 ## Using a player's attack angle to predict launch angles
 .pull-left[
 - A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 

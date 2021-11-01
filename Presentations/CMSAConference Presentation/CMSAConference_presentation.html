@@ -4,8 +4,8 @@
     <title>Maximizing wOBA with Launch Angle and Exit Velocity</title>
     <meta charset="utf-8" />
     <meta name="author" content="Sarah Sult, Brooke Coneeny, Erin Franke" />
-    <meta name="date" content="2021-10-30" />
-    <script src="CMSAConference_presentation_files/header-attrs-2.10/header-attrs.js"></script>
+    <meta name="date" content="2021-11-01" />
+    <script src="CMSAConference_presentation_files/header-attrs-2.8/header-attrs.js"></script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -14,7 +14,7 @@ class: center, middle, inverse, title-slide
 
 # Maximizing wOBA with Launch Angle and Exit Velocity
 ### Sarah Sult, Brooke Coneeny, Erin Franke
-### 2021-10-30
+### 2021-11-01
 
 ---
 
@@ -126,7 +126,7 @@ class: center, middle, inverse, title-slide
 #Breaking down the previous graph proportionally...
 
 &lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-6-1.png" width="1008" style="display: block; margin: auto;" /&gt;
-
+---
 ### We can make wOBA-maximizing recommendations for changes in a player's launch angle based on their exit velocity 
 
 .pull-left[
@@ -162,22 +162,7 @@ class: center, middle, inverse, title-slide
 &lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-12-1.png" width="432" /&gt;
 ]
 ---
-### We further evaluated our model by taking the following steps 
 
-1) Compared our interaction model to the original additive model and a model with tensor 
-smoothing using predictions from **5 five fold cross validation** and graphing the **RMSEs**.
-
-2) Tuned our **k** to **200** with cross validation to find where the **decrease in RMSE for each model had plateaued**
-
-  - Then used `gam.check()` to ensure the **k** we chose adequately represented to complexity of the relationship between variables. 
-
-3) Checked the concurvity of the model to confirm no collinearity between launch angle and exit velocity. 
-
-4) Created the following heatmap to understand which combinations of exit velocity and launch angle we have enough data on
-
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-13-1.png" width="360" style="display: block; margin: auto;" /&gt;
-
----
 ## Using a player's attack angle to predict launch angles
 .pull-left[
 - A player's **attack angle** is the angle that the barrel of the bat travels through impact with the baseball 
@@ -203,12 +188,12 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - This data was run though the wOBA model (GAM) to generate predictions of the player's potential production
 
 .pull-left[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-16-1.png" width="360" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-15-1.png" width="360" /&gt;
 
 ]
 
 .pull-right[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-17-1.png" width="360" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-16-1.png" width="360" /&gt;
 ]
 
 ---
@@ -219,10 +204,10 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - As a result, we determined it crucial that we update our model so that it take into account that when a player changes his attack angle, the pitches he receives and makes contact with will change. 
 
 .pull-left[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-18-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-17-1.png" width="432" /&gt;
 ]
 .pull-right[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-19-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-18-1.png" width="432" /&gt;
 ]
 ---
 # Attacking the assumption with a contact GAM
@@ -243,10 +228,10 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - Grouped players by name and year and found their attack angle and true swing and miss percentage. We then compared the predicted values to the average proportion of swing and misses that player had from our model in order to test accuracy. 
 
 .pull-left[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-19-1.png" width="432" /&gt;
 ]
 .pull-right[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-21-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-20-1.png" width="432" /&gt;
 ]
 
 ---
@@ -255,10 +240,10 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - Our main hypothesis was that faster pitches with more spin further from the heart of the plate are fouled off more often, which can be seen in the graphs below
 
 .pull-left[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-22-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-21-1.png" width="432" /&gt;
 ]
 .pull-right[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-23-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-22-1.png" width="432" /&gt;
 ]
 
 ---
@@ -286,11 +271,11 @@ smoothing using predictions from **5 five fold cross validation** and graphing t
 - However, when we graph our results we find that wOBA continues to increase with attack angle without plateauing. 
 
 .pull-left[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-24-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-23-1.png" width="432" /&gt;
 ]
 
 .pull-right[
-&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-25-1.png" width="432" /&gt;
+&lt;img src="CMSAConference_presentation_files/figure-html/unnamed-chunk-24-1.png" width="432" /&gt;
 ]
 
 ---
